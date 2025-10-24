@@ -128,7 +128,7 @@ export function RecordFormModal({
       fecha: localDate,
       hora: data.hora,
       kilometraje: Number(data.kilometraje), // Aseguramos que sea número
-      tipo: data.tipo,
+      tipo: data.tipo.toLowerCase() as 'entrada' | 'salida',
     };
     console.log("DEBUG dataToSave:" , dataToSave)
     onSave(dataToSave);
@@ -329,7 +329,7 @@ export function RecordFormModal({
                             message: 'El valor debe ser al menos 25.',
                           },
                           max: {
-                            value: 50,
+                            value: 999,
                             message: 'El valor no debe exceder 50.'
                           }
                         }}
