@@ -1,10 +1,8 @@
 import { useEffect, Fragment } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { Dialog, Transition } from '@headlessui/react';
-import type { IDriver, ICreateDriver, IUpdateDriver } from '../../store/driverStore';
+import type { IDriver, ICreateDriver, IUpdateDriver } from '../store/driverStore';
 
-
-// Datos del formulario
 export interface DriverFormData {
   nombre: string;
   licencia: string;
@@ -13,7 +11,6 @@ export interface DriverFormData {
   activo: boolean;
 }
 
-// Props del modal
 export interface DriverModalProps {
   visible: boolean;
   onHide: () => void;
@@ -22,7 +19,6 @@ export interface DriverModalProps {
   isSaving: boolean;
 }
 
-// Icono para cerrar
 const XMarkIcon = ({ className = 'w-6 h-6' }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -54,7 +50,6 @@ export function DriverFormModal({
   useEffect(() => {
     if (visible) {
       if (isEditMode && driverToEdit) {
-        // Modo Edición
         reset({
           nombre: driverToEdit.nombre,
           licencia: driverToEdit.licencia,
@@ -63,20 +58,18 @@ export function DriverFormModal({
           activo: driverToEdit.activo,
         });
       } else {
-        // Modo Creación
         reset({
           nombre: '',
           licencia: '',
           telefono: '',
           email: '',
-          activo: true, // Por defecto
+          activo: true,
         });
       }
     }
   }, [driverToEdit, visible, reset, isEditMode]);
 
   const onSubmit = (data: DriverFormData) => {
-    // Prepara el DTO quitando campos vacíos (para los opcionales)
     const dto = {
       ...data,
       telefono: data.telefono || undefined,
@@ -87,16 +80,15 @@ export function DriverFormModal({
       onSave(dto as IUpdateDriver);
     } else {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { activo, ...createDto } = dto; // 'activo' no se envía al crear
+      const { activo, ...createDto } = dto;
       onSave(createDto as ICreateDriver);
     }
   };
 
-  // --- Clases de Tailwind ---
   const inputClass = (hasError: boolean) =>
     `mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-colors
     ${hasError ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`;
-  
+
   const labelClass = 'block text-sm font-medium text-gray-700 dark:text-gray-300';
   const errorClass = 'mt-1 text-sm text-red-600';
   const buttonBaseClass =
@@ -148,7 +140,6 @@ export function DriverFormModal({
 
                 <form onSubmit={handleSubmit(onSubmit)} className="mt-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    {/* Nombre */}
                     <div className="md:col-span-2">
                       <label htmlFor="nombre" className={labelClass}>
                         Nombre Completo
@@ -156,19 +147,17 @@ export function DriverFormModal({
                       <Controller
                         name="nombre"
                         control={control}
-                        // --- VALIDACIONES ACTUALIZADAS ---
-                        rules={{ 
+                        rules={{
                           required: 'El nombre es obligatorio.',
                           minLength: {
                             value: 1,
-                            message: 'El nombre debe tener al menos 1 caracter.'
+                            message: 'El nombre debe tener al menos 1 caracter.',
                           },
                           maxLength: {
                             value: 30,
-                            message: 'El nombre no debe exceder los 30 caracteres.'
-                          }
+                            message: 'El nombre no debe exceder los 30 caracteres.',
+                          },
                         }}
-                        // --- FIN DE VALIDACIONES ---
                         render={({ field, fieldState }) => (
                           <input
                             {...field}
@@ -185,7 +174,6 @@ export function DriverFormModal({
                       )}
                     </div>
 
-                    {/* Licencia */}
                     <div>
                       <label htmlFor="licencia" className={labelClass}>
                         N° de Licencia
@@ -193,24 +181,21 @@ export function DriverFormModal({
                       <Controller
                         name="licencia"
                         control={control}
-                        // --- VALIDACIONES ACTUALIZADAS ---
                         rules={{
                           required: 'La licencia es obligatoria.',
                           minLength: {
                             value: 1,
-                            message: 'La licencia debe tener al menos 1 caracter.'
+                            message: 'La licencia debe tener al menos 1 caracter.',
                           },
                           maxLength: {
                             value: 20,
-                            message: 'La licencia no debe exceder los 20 caracteres.'
+                            message: 'La licencia no debe exceder los 20 caracteres.',
                           },
                           pattern: {
                             value: /^[A-Z0-9-]+$/,
-                            // Mensaje actualizado para coincidir con el DTO
                             message: 'La licencia debe contener solo letras mayúsculas, números y guiones',
                           },
                         }}
-                        // --- FIN DE VALIDACIONES ---
                         render={({ field, fieldState }) => (
                           <input
                             {...field}
@@ -227,7 +212,6 @@ export function DriverFormModal({
                       )}
                     </div>
 
-                    {/* Teléfono */}
                     <div>
                       <label htmlFor="telefono" className={labelClass}>
                         Teléfono (Opcional)
@@ -235,18 +219,16 @@ export function DriverFormModal({
                       <Controller
                         name="telefono"
                         control={control}
-                        // --- VALIDACIONES AÑADIDAS ---
                         rules={{
                           minLength: {
                             value: 1,
-                            message: 'El teléfono debe tener al menos 1 caracter.'
+                            message: 'El teléfono debe tener al menos 1 caracter.',
                           },
                           maxLength: {
                             value: 15,
-                            message: 'El teléfono no debe exceder los 15 caracteres.'
-                          }
+                            message: 'El teléfono no debe exceder los 15 caracteres.',
+                          },
                         }}
-                        // --- FIN DE VALIDACIONES ---
                         render={({ field, fieldState }) => (
                           <input
                             {...field}
@@ -256,7 +238,6 @@ export function DriverFormModal({
                           />
                         )}
                       />
-                      {/* Mostrar error si existe (p.ej. maxLength) */}
                       {errors.telefono && (
                         <small className={errorClass}>
                           {errors.telefono.message}
@@ -264,7 +245,6 @@ export function DriverFormModal({
                       )}
                     </div>
 
-                    {/* Email */}
                     <div className="md:col-span-2">
                       <label htmlFor="email" className={labelClass}>
                         Email (Opcional)
@@ -272,23 +252,20 @@ export function DriverFormModal({
                       <Controller
                         name="email"
                         control={control}
-                        // --- VALIDACIONES ACTUALIZADAS ---
-                        // Es opcional, pero si existe, debe cumplir @Length(1, 255) y ser email
                         rules={{
                           minLength: {
                             value: 1,
-                            message: 'El email debe tener al menos 1 caracter.'
+                            message: 'El email debe tener al menos 1 caracter.',
                           },
                           maxLength: {
                             value: 255,
-                            message: 'El email no debe exceder los 255 caracteres.'
+                            message: 'El email no debe exceder los 255 caracteres.',
                           },
                           pattern: {
                             value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
                             message: 'Email no válido.',
                           },
                         }}
-                        // --- FIN DE VALIDACIONES ---
                         render={({ field, fieldState }) => (
                           <input
                             {...field}
@@ -305,7 +282,6 @@ export function DriverFormModal({
                       )}
                     </div>
 
-                    {/* Checkbox Activo (solo en modo edición) */}
                     {isEditMode && (
                       <div className="md:col-span-2 flex items-center gap-3 mt-2">
                         <Controller
@@ -328,7 +304,6 @@ export function DriverFormModal({
                     )}
                   </div>
 
-                  {/* Botones del formulario */}
                   <div className="pt-6 mt-6 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
                     <button
                       type="button"

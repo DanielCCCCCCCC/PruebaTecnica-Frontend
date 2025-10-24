@@ -1,3 +1,4 @@
+// src/page/RecordsPage.tsx
 import React, { useState, useEffect, useMemo, Fragment } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import toast from 'react-hot-toast';
@@ -7,9 +8,8 @@ import type {
   ICreateRecord,
   IFilterRecords,
 } from '../interfaces/IRecord';
-import { RecordFormModal } from '../components/records/RecordFormModal';
+import { RecordFormModal } from '../components/RecordFormModal';
 
-// --- Iconos (Sin cambios) ---
 interface SvgIconProps extends React.SVGProps<SVGSVGElement> {
   className?: string;
 }
@@ -86,7 +86,6 @@ const DocumentTextIcon: React.FC<SvgIconProps> = (props) => (
   </svg>
 );
 
-// --- Helper de formato de fecha (Sin cambios) ---
 const formatDate = (date: Date | string) => {
   return new Date(date).toLocaleDateString(undefined, {
     year: 'numeric',
@@ -96,8 +95,6 @@ const formatDate = (date: Date | string) => {
   });
 };
 
-// --- Helper para obtener valores (para ordenar) (Sin cambios) ---
-// (Necesario para ordenar por campos anidados como vehicle.placa)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const getSortValue = (obj: IRecord, key: string): any => {
   if (key === 'vehicle.placa') return obj.vehicle?.placa || '';
@@ -110,7 +107,6 @@ const getSortValue = (obj: IRecord, key: string): any => {
 };
 
 function RecordsPage() {
-  // --- ESTADO DEL STORE (Sin cambios) ---
   const {
     records,
     filterOptions,
@@ -123,14 +119,11 @@ function RecordsPage() {
     deleteRecord,
   } = useRecordStore();
 
-  // --- ESTADO LOCAL (Sin cambios) ---
   const [isFormModalVisible, setIsFormModalVisible] = useState(false);
   const [isConfirmModalVisible, setIsConfirmModalVisible] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [recordToEdit, setRecordToEdit] = useState<IRecord | null>(null);
   const [recordToDelete, setRecordToDelete] = useState<IRecord | null>(null);
-
-  // --- ESTADOS DE FILTRO (para los inputs) (Sin cambios) ---
   const [vehicleFilter, setVehicleFilter] = useState('');
   const [driverFilter, setDriverFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
@@ -138,28 +131,24 @@ function RecordsPage() {
   const [endDateFilter, setEndDateFilter] = useState('');
   const [activeFilters, setActiveFilters] = useState<IFilterRecords>({});
 
-  // --- ESTADOS DE ORDEN Y PAGINACIÓN (ACTUALIZADOS) ---
   const [sortConfig, setSortConfig] = useState<{
     key: string;
     direction: 'asc' | 'desc';
   } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [rowsPerPage] = useState(12); // Ajustado a 12 para tarjetas
+  const [rowsPerPage] = useState(12); 
 
   // Carga inicial (Sin cambios)
   useEffect(() => {
     fetchRecords(activeFilters);
   }, [fetchRecords, activeFilters]);
 
-  // Carga inicial de opciones de filtros (Sin cambios)
   useEffect(() => {
     fetchFilterOptions();
   }, [fetchFilterOptions]);
 
-  // --- LÓGICA DE ORDENAMIENTO (CLIENT-SIDE) (Sin cambios) ---
   const processedRecords = useMemo(() => {
-    const sorted = [...records]; // Empezar con los datos filtrados del server
+    const sorted = [...records];
     if (sortConfig !== null) {
       sorted.sort((a, b) => {
         const valA = getSortValue(a, sortConfig.key);
@@ -172,7 +161,6 @@ function RecordsPage() {
     return sorted;
   }, [records, sortConfig]);
 
-  // --- LÓGICA DE PAGINACIÓN (CLIENT-SIDE) (Sin cambios) ---
   const totalItems = processedRecords.length;
   const totalPages = Math.ceil(totalItems / rowsPerPage);
   const paginatedRecords = useMemo(() => {
@@ -180,7 +168,6 @@ function RecordsPage() {
     return processedRecords.slice(startIndex, startIndex + rowsPerPage);
   }, [processedRecords, currentPage, rowsPerPage]);
 
-  // --- NUEVO HANDLER PARA ORDENAMIENTO (DESDE EL SELECT) ---
   const handleSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
     if (value === '') {
@@ -189,24 +176,23 @@ function RecordsPage() {
       const [key, direction] = value.split('-') as [string, 'asc' | 'desc'];
       setSortConfig({ key, direction });
     }
-    setCurrentPage(1); // Resetear a la primera página al ordenar
+    setCurrentPage(1); 
   };
 
-  // --- MANEJO DE FILTROS (Sin cambios) ---
   const handleFilterSubmit = () => {
     const newFilters: IFilterRecords = {
       vehicleId: vehicleFilter || undefined,
       driverId: driverFilter || undefined,
-      tipo: typeFilter ? typeFilter.toUpperCase() : undefined, // Ajustado a MAYÚSCULAS
+      tipo: typeFilter ? typeFilter.toUpperCase() : undefined,
       startDate: startDateFilter
         ? new Date(startDateFilter + 'T00:00:00')
         : undefined,
       endDate: endDateFilter
-        ? new Date(endDateFilter + 'T00:00:00') // Debería ser T23:59:59, pero depende del backend. Asumimos T00:00:00
+        ? new Date(endDateFilter + 'T00:00:00') 
         : undefined,
     };
     setActiveFilters(newFilters);
-    setCurrentPage(1); // <-- RESETEAR PAGINACIÓN
+    setCurrentPage(1);
   };
 
   const handleFilterClear = () => {
@@ -216,10 +202,9 @@ function RecordsPage() {
     setStartDateFilter('');
     setEndDateFilter('');
     setActiveFilters({});
-    setCurrentPage(1); // <-- RESETEAR PAGINACIÓN
+    setCurrentPage(1);
   };
 
-  // --- MANEJO DE MODALES (Sin cambios) ---
   const openNewModal = () => {
     setRecordToEdit(null);
     setIsFormModalVisible(true);
@@ -241,7 +226,6 @@ function RecordsPage() {
     setIsConfirmModalVisible(false);
   };
 
-  // --- LÓGICA DE GUARDADO (Sin cambios) ---
   const handleSave = async (data: ICreateRecord) => {
     setIsSaving(true);
     const toastId = toast.loading('Guardando...');
@@ -284,7 +268,6 @@ function RecordsPage() {
     hideConfirmModal();
   };
 
-  // --- Clases de Tailwind (Sin cambios) ---
   const buttonBaseClass =
     'inline-flex items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 transition-colors shadow-sm';
   const primaryButtonClass = `${buttonBaseClass} bg-blue-600 text-white border-transparent hover:bg-blue-700 focus-visible:ring-blue-500 disabled:bg-blue-400`;
@@ -295,7 +278,6 @@ function RecordsPage() {
   const labelBaseClass =
     'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1';
 
-  // --- FUNCIÓN PARA MANEJAR CAMBIO EN SELECT TIPO (Sin cambios) ---
   const handleTypeFilterChange = (
     event: React.ChangeEvent<HTMLSelectElement>,
   ) => {
@@ -325,7 +307,7 @@ function RecordsPage() {
                 Total registros
               </p>
               <p className="text-xl font-bold text-gray-800 dark:text-white">
-                {totalItems} {/* MOSTRAR TOTAL DE PROCESSED */}
+                {totalItems}
               </p>
             </div>
           </div>
@@ -335,7 +317,6 @@ function RecordsPage() {
       {/* Main Content */}
       <main className="max-w-8xl mx-auto">
         <div className="shadow-2xl rounded-3xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-white/50 dark:border-gray-700/50 overflow-hidden">
-          {/* Toolbar y Filtros (ACTUALIZADO) */}
           <div className="p-5 border-b border-gray-200 dark:border-gray-700">
             <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-4">
               <button onClick={openNewModal} className={primaryButtonClass}>
@@ -347,7 +328,6 @@ function RecordsPage() {
               </span>
             </div>
 
-            {/* Fila de Filtros (ACTUALIZADA A 3 COLUMNAS) */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {/* Filtro Vehículos */}
               <div>
@@ -370,7 +350,6 @@ function RecordsPage() {
                 </select>
               </div>
 
-              {/* Filtro de Motorista/Driver */}
               <div>
                 <label htmlFor="filt_driver" className={labelBaseClass}>
                   Motorista
@@ -390,7 +369,6 @@ function RecordsPage() {
                   ))}
                 </select>
               </div>
-              {/* Filtro Tipo */}
               <div>
                 <label htmlFor="filt_tipo" className={labelBaseClass}>
                   Tipo
@@ -406,7 +384,6 @@ function RecordsPage() {
                   <option value="SALIDA">Salida</option>
                 </select>
               </div>
-              {/* Filtros Fecha Inicio */}
               <div>
                 <label htmlFor="filt_start" className={labelBaseClass}>
                   Fecha Inicio
@@ -419,7 +396,6 @@ function RecordsPage() {
                   onChange={(e) => setStartDateFilter(e.target.value)}
                 />
               </div>
-              {/* Filtros Fecha Fin */}
               <div>
                 <label htmlFor="filt_end" className={labelBaseClass}>
                   Fecha Fin
@@ -433,7 +409,6 @@ function RecordsPage() {
                 />
               </div>
               
-              {/* NUEVO: Ordenamiento */}
               <div>
                 <label htmlFor="filt_sort" className={labelBaseClass}>
                   Ordenar por
@@ -462,7 +437,6 @@ function RecordsPage() {
                 </select>
               </div>
             </div>
-            {/* Botones de Filtro (Sin cambios) */}
             <div className="flex justify-end gap-3 mt-4">
               <button onClick={handleFilterClear} className={secondaryButtonClass}>
                 Limpiar
@@ -473,7 +447,6 @@ function RecordsPage() {
             </div>
           </div>
 
-          {/* --- INICIO: REEMPLAZO DE TABLA POR GRID DE TARJETAS --- */}
           <div className="p-4 md:p-6 bg-gray-50/50 dark:bg-gray-900/30">
             {loading ? (
               <div className="py-10 text-center text-gray-500 dark:text-gray-400 italic">
@@ -486,11 +459,8 @@ function RecordsPage() {
                     key={record.id}
                     className="flex flex-col justify-between rounded-xl bg-white p-4 shadow-lg transition-all duration-200 hover:shadow-2xl dark:bg-gray-800 border border-gray-200 dark:border-gray-700/80"
                   >
-                    {/* Contenido Principal de la Tarjeta */}
                     <div>
-                      {/* Cabecera de Tarjeta */}
                       <div className="flex items-start justify-between gap-3 mb-3">
-                        {/* Placa y Vehículo */}
                         <div className="flex-1">
                           <h3
                             className="text-lg font-bold text-blue-700 dark:text-blue-400 truncate"
@@ -504,7 +474,6 @@ function RecordsPage() {
                             {record.vehicle?.marca} {record.vehicle?.modelo}
                           </p>
                         </div>
-                        {/* Badge de Tipo */}
                         <span
                           className={`flex-shrink-0 px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
                             record.tipo === 'SALIDA'
@@ -516,7 +485,6 @@ function RecordsPage() {
                         </span>
                       </div>
 
-                      {/* Detalles del Registro */}
                       <div className="space-y-1.5 text-sm">
                         <div className="flex">
                           <span className="w-20 flex-shrink-0 font-medium text-gray-700 dark:text-gray-300">
@@ -555,7 +523,6 @@ function RecordsPage() {
                       </div>
                     </div>
 
-                    {/* Acciones en el pie de la tarjeta */}
                     <div className="mt-4 flex justify-end gap-2 border-t border-gray-200 pt-3 dark:border-gray-700">
                       <button
                         onClick={() => openEditModal(record)}
@@ -576,7 +543,6 @@ function RecordsPage() {
                 ))}
               </div>
             ) : (
-              // Mensaje de no resultados
               <div className="py-10 text-center text-gray-500 dark:text-gray-400 italic">
                 {records.length === 0 && Object.keys(activeFilters).length === 0
                   ? 'No hay registros.'
@@ -584,9 +550,7 @@ function RecordsPage() {
               </div>
             )}
           </div>
-          {/* --- FIN: REEMPLAZO DE TABLA --- */}
 
-          {/* --- PAGINADOR (Se mantiene igual) --- */}
           {totalPages > 1 && (
             <div className="flex flex-col items-center gap-2 border-t border-gray-200 bg-gray-50 px-5 py-3 sm:flex-row sm:justify-between dark:border-gray-700 dark:bg-gray-700/50">
               <span className="text-xs text-gray-700 sm:text-sm dark:text-gray-300">
@@ -617,11 +581,9 @@ function RecordsPage() {
               </div>
             </div>
           )}
-          {/* --- FIN DEL PAGINADOR --- */}
         </div>
       </main>
 
-      {/* Modals (Sin cambios) */}
       <RecordFormModal
         visible={isFormModalVisible}
         onHide={hideFormModal}
@@ -629,7 +591,7 @@ function RecordsPage() {
         onSave={handleSave}
         isSaving={isSaving}
         vehicles={filterOptions.vehicles}
-        drivers={filterOptions.drivers} // <-- AÑADIDO: pasar motoristas al modal
+        drivers={filterOptions.drivers}
       />
       <Transition appear show={isConfirmModalVisible} as={Fragment}>
         <Dialog as="div" className="relative z-10" onClose={hideConfirmModal}>
@@ -700,7 +662,6 @@ function RecordsPage() {
         </Dialog>
       </Transition>
 
-      {/* Footer (Sin cambios) */}
       <footer className="mt-8 text-center">
         <p className="text-sm text-gray-400 dark:text-gray-500">
           Sistema de Gestión Vehicular &copy; {new Date().getFullYear()}

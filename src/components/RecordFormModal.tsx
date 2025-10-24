@@ -1,23 +1,18 @@
 import { useEffect, Fragment } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { Dialog, Transition } from '@headlessui/react';
-// Asumo que estas interfaces ahora usarán driverId
-import type { IRecord, ICreateRecord } from '../../interfaces/IRecord';
-import { useDriverStore } from '../../store/driverStore'; // <--- 1. IMPORTAR
+import type { IRecord, ICreateRecord } from '../interfaces/IRecord';
+import { useDriverStore } from '../store/driverStore';
 
-// --- Interfaces ---
-
-// Los datos que maneja el formulario (strings de inputs)
 export interface RecordFormData {
   vehicleId: string;
-  driverId: string; // <--- 2. CAMBIADO (de motorista a driverId)
-  fecha: string; // Formato YYYY-MM-DD
-  hora: string; // Formato HH:MM
+  driverId: string;
+  fecha: string;
+  hora: string;
   kilometraje: number;
   tipo: string;
 }
 
-// Las opciones del combo de vehículos
 interface VehicleOption {
   id: string;
   placa: string;
@@ -25,31 +20,21 @@ interface VehicleOption {
   modelo: string;
 }
 
-// Props del modal
-// export interface RecordModalProps {
-//   visible: boolean;
-//   onHide: () => void;
-//   recordToEdit: IRecord | null;
-//   onSave: (data: ICreateRecord) => Promise<void>;
-//   isSaving: boolean;
-//   vehicles: VehicleOption[]; // Lista de vehículos para el <select>
-// }
 export interface RecordModalProps {
   visible: boolean;
   onHide: () => void;
   recordToEdit: IRecord | null;
   onSave: (data: ICreateRecord) => Promise<void>;
   isSaving: boolean;
-  vehicles: VehicleOption[]; // Lista de vehículos para el <select>
-  
-  // 👇 AÑADE ESTA LÍNEA:
+  vehicles: VehicleOption[];
+
   drivers: {
     id: string;
     nombre: string;
     licencia: string;
   }[];
 }
-// Icono para cerrar
+
 const XMarkIcon = ({ className = 'w-6 h-6' }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -63,7 +48,6 @@ const XMarkIcon = ({ className = 'w-6 h-6' }) => (
   </svg>
 );
 
-// ... (helpers toISODateString y toHHMMString sin cambios) ...
 const toISODateString = (date: Date | string | undefined | null) => {
   if (!date) return new Date().toISOString().split('T')[0];
   return new Date(date).toISOString().split('T')[0];
@@ -89,24 +73,19 @@ export function RecordFormModal({
   } = useForm<RecordFormData>();
   const isEditMode = !!recordToEdit;
 
-  // --- 1. OBTENER MOTORISTAS ---
   const { activeDrivers, fetchActiveDrivers } = useDriverStore();
 
-  // Cargar motoristas activos cuando el modal se hace visible
   useEffect(() => {
     if (visible) {
       fetchActiveDrivers();
     }
   }, [visible, fetchActiveDrivers]);
-  // --- FIN OBTENER MOTORISTAS ---
 
   useEffect(() => {
     if (visible) {
       if (isEditMode && recordToEdit) {
-        // Modo Edición: Cargar datos existentes
         reset({
           vehicleId: recordToEdit.vehicleId,
-          // 2. CAMBIADO (asumiendo que IRecord ahora tiene driverId)
           driverId: recordToEdit.driverId ?? '',
           fecha: toISODateString(recordToEdit.fecha),
           hora: toHHMMString(recordToEdit.hora),
@@ -114,41 +93,33 @@ export function RecordFormModal({
           tipo: recordToEdit.tipo,
         });
       } else {
-        // Modo Creación: Valores por defecto
         reset({
           vehicleId: '',
-          driverId: '', // 2. CAMBIADO
+          driverId: '',
           fecha: toISODateString(new Date()),
           hora: '08:00',
           kilometraje: 0,
-          tipo: 'SALIDA', // Valor por defecto
+          tipo: 'SALIDA',
         });
       }
     }
-    // Asegúrate de que IRecord tenga driverId, si no, usa recordToEdit.driver.id
   }, [recordToEdit, visible, reset, isEditMode]);
 
-  /**
-   * Transforma los datos del formulario (strings) al DTO
-   * que espera la API (con Date object, etc.)
-   */
   const onSubmit = (data: RecordFormData) => {
     const localDate = new Date(data.fecha + 'T00:00:00');
 
-    // 2. CAMBIADO (Asumiendo que ICreateRecord espera driverId)
     const dataToSave: ICreateRecord = {
       vehicleId: data.vehicleId,
       driverId: data.driverId,
       fecha: localDate,
       hora: data.hora,
-      kilometraje: Number(data.kilometraje), // Aseguramos que sea número
+      kilometraje: Number(data.kilometraje),
       tipo: data.tipo.toLowerCase() as 'entrada' | 'salida',
     };
-    console.log("DEBUG dataToSave:" , dataToSave)
+    console.log('DEBUG dataToSave:', dataToSave);
     onSave(dataToSave);
   };
 
-  // --- Clases de Tailwind (sin cambios) ---
   const inputClass = (hasError: boolean) =>
     `mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-colors
     ${hasError ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`;
@@ -163,7 +134,6 @@ export function RecordFormModal({
   return (
     <Transition appear show={visible} as={Fragment}>
       <Dialog as="div" className="relative z-10" onClose={onHide}>
-        {/* ... (Fondo oscuro y transiciones sin cambios) ... */}
         <Transition.Child
           as={Fragment}
           enter="ease-out duration-300"
@@ -188,7 +158,6 @@ export function RecordFormModal({
               leaveTo="opacity-0 scale-95"
             >
               <Dialog.Panel className="w-full max-w-lg transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all dark:bg-gray-800">
-                {/* ... (Cabecera del Modal sin cambios) ... */}
                 <div className="flex justify-between items-center">
                   <Dialog.Title
                     as="h3"
@@ -206,7 +175,6 @@ export function RecordFormModal({
 
                 <form onSubmit={handleSubmit(onSubmit)} className="mt-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    {/* Vehículo (Sin cambios) */}
                     <div>
                       <label htmlFor="vehicleId" className={labelClass}>
                         Vehículo (Placa)
@@ -239,17 +207,16 @@ export function RecordFormModal({
                       )}
                     </div>
 
-                    {/* --- 3. CAMPO DE MOTORISTA ACTUALIZADO --- */}
                     <div>
                       <label htmlFor="driverId" className={labelClass}>
                         Motorista
                       </label>
                       <Controller
-                        name="driverId" // <--- CAMBIADO
+                        name="driverId"
                         control={control}
                         rules={{ required: 'El motorista es obligatorio.' }}
                         render={({ field, fieldState }) => (
-                          <select // <--- CAMBIADO (de input a select)
+                          <select
                             {...field}
                             id="driverId"
                             className={inputClass(!!fieldState.error)}
@@ -257,7 +224,6 @@ export function RecordFormModal({
                             <option value="" disabled>
                               Seleccione un motorista...
                             </option>
-                            {/* Mapea los motoristas activos del store */}
                             {activeDrivers.map((driver) => (
                               <option key={driver.id} value={driver.id}>
                                 {driver.nombre}
@@ -266,14 +232,13 @@ export function RecordFormModal({
                           </select>
                         )}
                       />
-                      {errors.driverId && ( // <--- CAMBIADO
+                      {errors.driverId && (
                         <small className={errorClass}>
                           {errors.driverId.message}
                         </small>
                       )}
                     </div>
 
-                    {/* ... (Campos Fecha, Hora, Kilometraje, Tipo sin cambios) ... */}
                     <div>
                       <label htmlFor="fecha" className={labelClass}>
                         Fecha
@@ -335,7 +300,6 @@ export function RecordFormModal({
                       <Controller
                         name="kilometraje"
                         control={control}
-                        // --- VALIDACIONES ACTUALIZADAS ---
                         rules={{
                           required: 'El kilometraje es obligatorio.',
                           min: {
@@ -344,10 +308,9 @@ export function RecordFormModal({
                           },
                           max: {
                             value: 999,
-                            message: 'El valor no debe exceder 50.'
-                          }
+                            message: 'El valor no debe exceder 50.',
+                          },
                         }}
-                        // --- FIN DE VALIDACIONES ---
                         render={({ field, fieldState }) => (
                           <input
                             {...field}
@@ -392,7 +355,6 @@ export function RecordFormModal({
                     </div>
                   </div>
 
-                  {/* ... (Botones del formulario sin cambios) ... */}
                   <div className="pt-6 mt-6 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
                     <button
                       type="button"

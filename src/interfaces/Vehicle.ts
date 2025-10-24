@@ -8,7 +8,6 @@ export interface IVehicle {
   updatedAt: string;
 }
 
-// Los datos que maneja el formulario
 export interface VehicleFormData {
   marca: string;
   modelo: string;

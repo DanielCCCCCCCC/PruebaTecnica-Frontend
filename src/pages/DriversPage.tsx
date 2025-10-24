@@ -1,3 +1,4 @@
+// src/page/DriversPage.tsx
 import React, { useState, useEffect, useMemo, Fragment } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import toast from 'react-hot-toast';
@@ -8,7 +9,7 @@ import type {
   IUpdateDriver,
   IFilterDrivers,
 } from '../store/driverStore';
-import { DriverFormModal } from '../components/drivers/DriverFormModal';
+import { DriverFormModal } from '../components/DriverFormModal';
 
 // --- Iconos ---
 interface SvgIconProps extends React.SVGProps<SVGSVGElement> {
@@ -69,7 +70,6 @@ const AlertIcon: React.FC<SvgIconProps> = (props) => (
     />
   </svg>
 );
-// Icono para la cabecera (Motoristas)
 const UserGroupIcon: React.FC<SvgIconProps> = (props) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -88,7 +88,6 @@ const UserGroupIcon: React.FC<SvgIconProps> = (props) => (
   </svg>
 );
 
-// --- Helper para obtener valores (para ordenar) ---
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const getSortValue = (obj: IDriver, key: string): any => {
   // Asegurarnos de que la clave es válida para IDriver
@@ -130,17 +129,15 @@ function DriversPage() {
     direction: 'asc' | 'desc';
   } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [rowsPerPage] = useState(12); // Ajustado para layout de tarjetas
+  const [rowsPerPage] = useState(12);
 
   // Carga inicial
   useEffect(() => {
     fetchDrivers(activeFilters);
   }, [fetchDrivers, activeFilters]);
 
-  // --- LÓGICA DE ORDENAMIENTO (CLIENT-SIDE) ---
   const processedDrivers = useMemo(() => {
-    const sorted = [...drivers]; // Empezar con los datos filtrados del server
+    const sorted = [...drivers];
     if (sortConfig !== null) {
       sorted.sort((a, b) => {
         const valA = getSortValue(a, sortConfig.key);
@@ -153,7 +150,6 @@ function DriversPage() {
     return sorted;
   }, [drivers, sortConfig]);
 
-  // --- LÓGICA DE PAGINACIÓN (CLIENT-SIDE) ---
   const totalItems = processedDrivers.length;
   const totalPages = Math.ceil(totalItems / rowsPerPage);
   const paginatedDrivers = useMemo(() => {
@@ -161,7 +157,6 @@ function DriversPage() {
     return processedDrivers.slice(startIndex, startIndex + rowsPerPage);
   }, [processedDrivers, currentPage, rowsPerPage]);
 
-  // --- NUEVO HANDLER PARA ORDENAMIENTO (DESDE EL SELECT) ---
   const handleSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
     if (value === '') {
@@ -170,10 +165,9 @@ function DriversPage() {
       const [key, direction] = value.split('-') as [string, 'asc' | 'desc'];
       setSortConfig({ key, direction });
     }
-    setCurrentPage(1); // Resetear a la primera página al ordenar
+    setCurrentPage(1);
   };
 
-  // --- MANEJO DE FILTROS (Actualizado para resetear paginación) ---
   const handleFilterSubmit = () => {
     const newFilters: IFilterDrivers = {
       nombre: nombreFilter || undefined,
@@ -181,7 +175,7 @@ function DriversPage() {
       activo: activoFilter === '' ? undefined : activoFilter === 'true',
     };
     setActiveFilters(newFilters);
-    setCurrentPage(1); // <-- RESETEAR PAGINACIÓN
+    setCurrentPage(1);
   };
 
   const handleFilterClear = () => {
@@ -189,10 +183,9 @@ function DriversPage() {
     setLicenciaFilter('');
     setActivoFilter('');
     setActiveFilters({});
-    setCurrentPage(1); // <-- RESETEAR PAGINACIÓN
+    setCurrentPage(1);
   };
 
-  // --- MANEJO DE MODALES ---
   const openNewModal = () => {
     setDriverToEdit(null);
     setIsFormModalVisible(true);
@@ -214,7 +207,6 @@ function DriversPage() {
     setIsConfirmModalVisible(false);
   };
 
-  // --- LÓGICA DE GUARDADO ---
   const handleSave = async (data: ICreateDriver | IUpdateDriver) => {
     setIsSaving(true);
     const toastId = toast.loading('Guardando...');
@@ -228,7 +220,6 @@ function DriversPage() {
       }
       setIsSaving(false);
       hideFormModal();
-      // Refrescar la lista
       handleFilterSubmit();
     } catch (error) {
       console.error(error);
@@ -241,7 +232,6 @@ function DriversPage() {
     }
   };
 
-  // --- LÓGICA DE ELIMINACIÓN ---
   const handleDeleteConfirm = async () => {
     if (!driverToDelete) return;
     const toastId = toast.loading('Eliminando...');
@@ -259,7 +249,6 @@ function DriversPage() {
     hideConfirmModal();
   };
 
-  // --- Clases de Tailwind ---
   const buttonBaseClass =
     'inline-flex items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 transition-colors shadow-sm';
   const primaryButtonClass = `${buttonBaseClass} bg-blue-600 text-white border-transparent hover:bg-blue-700 focus-visible:ring-blue-500 disabled:bg-blue-400`;
@@ -292,17 +281,15 @@ function DriversPage() {
                 Total motoristas
               </p>
               <p className="text-xl font-bold text-gray-800 dark:text-white">
-                {totalItems} {/* MOSTRAR TOTAL DE PROCESSED */}
+                {totalItems}
               </p>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="max-w-8xl mx-auto">
         <div className="shadow-2xl rounded-3xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-white/50 dark:border-gray-700/50 overflow-hidden">
-          {/* Toolbar y Filtros */}
           <div className="p-5 border-b border-gray-200 dark:border-gray-700">
             <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-4">
               <button onClick={openNewModal} className={primaryButtonClass}>
@@ -314,9 +301,7 @@ function DriversPage() {
               </span>
             </div>
 
-            {/* Fila de Filtros y Orden (AHORA 4 COLUMNAS) */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              {/* Filtro Nombre */}
               <div>
                 <label htmlFor="filt_nombre" className={labelBaseClass}>
                   Nombre
@@ -330,7 +315,6 @@ function DriversPage() {
                   onChange={(e) => setNombreFilter(e.target.value)}
                 />
               </div>
-              {/* Filtro Licencia */}
               <div>
                 <label htmlFor="filt_licencia" className={labelBaseClass}>
                   Licencia
@@ -344,7 +328,6 @@ function DriversPage() {
                   onChange={(e) => setLicenciaFilter(e.target.value)}
                 />
               </div>
-              {/* Filtro Estado */}
               <div>
                 <label htmlFor="filt_activo" className={labelBaseClass}>
                   Estado
@@ -361,7 +344,6 @@ function DriversPage() {
                   <option value="false">Inactivos</option>
                 </select>
               </div>
-              {/* NUEVO: Ordenamiento */}
               <div>
                 <label htmlFor="filt_sort" className={labelBaseClass}>
                   Ordenar por
@@ -383,7 +365,6 @@ function DriversPage() {
               </div>
             </div>
 
-            {/* Botones de Filtro */}
             <div className="flex justify-end gap-3 mt-4">
               <button onClick={handleFilterClear} className={secondaryButtonClass}>
                 Limpiar
@@ -394,7 +375,6 @@ function DriversPage() {
             </div>
           </div>
 
-          {/* --- INICIO: REEMPLAZO DE TABLA POR GRID DE TARJETAS --- */}
           <div className="p-4 md:p-6 bg-gray-50/50 dark:bg-gray-900/30">
             {loading ? (
               <div className="py-10 text-center text-gray-500 dark:text-gray-400 italic">
@@ -407,7 +387,6 @@ function DriversPage() {
                     key={driver.id}
                     className="flex flex-col justify-between rounded-xl bg-white p-4 shadow-lg transition-all duration-200 hover:shadow-2xl dark:bg-gray-800 border border-gray-200 dark:border-gray-700/80"
                   >
-                    {/* Contenido Principal de la Tarjeta */}
                     <div>
                       <div className="flex items-start justify-between gap-3 mb-3">
                         {/* Nombre y Licencia */}
@@ -422,7 +401,6 @@ function DriversPage() {
                             Lic: {driver.licencia}
                           </p>
                         </div>
-                        {/* Badge de Estado */}
                         <span
                           className={`flex-shrink-0 px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
                             driver.activo
@@ -434,7 +412,6 @@ function DriversPage() {
                         </span>
                       </div>
 
-                      {/* Detalles de Contacto */}
                       <div className="space-y-1.5 text-sm">
                         {driver.telefono && (
                           <div className="flex">
@@ -462,7 +439,6 @@ function DriversPage() {
                       </div>
                     </div>
 
-                    {/* Acciones en el pie de la tarjeta */}
                     <div className="mt-4 flex justify-end gap-2 border-t border-gray-200 pt-3 dark:border-gray-700">
                       <button
                         onClick={() => openEditModal(driver)}
@@ -483,7 +459,6 @@ function DriversPage() {
                 ))}
               </div>
             ) : (
-              // Mensaje de no resultados
               <div className="py-10 text-center text-gray-500 dark:text-gray-400 italic">
                 {drivers.length === 0 && Object.keys(activeFilters).length === 0
                   ? 'No hay motoristas registrados.'
@@ -491,9 +466,7 @@ function DriversPage() {
               </div>
             )}
           </div>
-          {/* --- FIN: REEMPLAZO DE TABLA --- */}
 
-          {/* --- PAGINADOR (Se mantiene igual) --- */}
           {totalPages > 1 && (
             <div className="flex flex-col items-center gap-2 border-t border-gray-200 bg-gray-50 px-5 py-3 sm:flex-row sm:justify-between dark:border-gray-700 dark:bg-gray-700/50">
               <span className="text-xs text-gray-700 sm:text-sm dark:text-gray-300">
@@ -524,11 +497,9 @@ function DriversPage() {
               </div>
             </div>
           )}
-          {/* --- FIN DEL PAGINADOR --- */}
         </div>
       </main>
 
-      {/* Modals (Se mantienen iguales) */}
       <DriverFormModal
         visible={isFormModalVisible}
         onHide={hideFormModal}
@@ -608,7 +579,6 @@ function DriversPage() {
         </Dialog>
       </Transition>
 
-      {/* Footer (Se mantiene igual) */}
       <footer className="mt-8 text-center">
         <p className="text-sm text-gray-400 dark:text-gray-500">
           Sistema de Gestión Vehicular &copy; {new Date().getFullYear()}

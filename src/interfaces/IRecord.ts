@@ -21,7 +21,7 @@ export interface IRecord {
 
 export interface ICreateRecord {
   vehicleId: string;
-  driverId: string; // <-- CAMBIADO
+  driverId: string; 
   fecha: Date;
   hora: string;
   kilometraje: number;
@@ -33,7 +33,7 @@ export interface IFilterRecords {
   fecha?: Date;
   vehicleId?: string;
   driverId?: string;
-  tipo?: string; // <-- AÑADIDO (puede ser string o RecordType si lo compartes)
+  tipo?: string;
   startDate?: Date;
   endDate?: Date;
 }
@@ -57,7 +57,7 @@ export interface RecordState {
   filterOptions: IFilterOptions;
   loading: boolean;
   loadingFilters: boolean;
-  error: string | null; // AÑADIR esta propiedad
+  error: string | null;
   fetchRecords: (filters?: IFilterRecords) => Promise<void>;
   fetchFilterOptions: () => Promise<void>;
   addRecord: (data: ICreateRecord) => Promise<IRecord>;

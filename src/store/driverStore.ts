@@ -1,9 +1,6 @@
 import { create } from 'zustand';
 import api from '../services/api';
 
-// --- Interfaces (Basadas en tu backend) ---
-
-// Coincide con tu driver.entity.ts
 export interface IDriver {
   id: string;
   nombre: string;
@@ -15,7 +12,6 @@ export interface IDriver {
   updatedAt: Date | string;
 }
 
-// Coincide con tu create-driver.dto.ts
 export interface ICreateDriver {
   nombre: string;
   licencia: string;
@@ -23,22 +19,19 @@ export interface ICreateDriver {
   email?: string;
 }
 
-// Coincide con tu update-driver.dto.ts
 export interface IUpdateDriver extends Partial<ICreateDriver> {
   activo?: boolean;
 }
 
-// Coincide con tu filter-drivers.dto.ts
 export interface IFilterDrivers {
   nombre?: string;
   licencia?: string;
   activo?: boolean;
 }
 
-// --- Definición del Store ---
 interface DriverState {
   drivers: IDriver[];
-  activeDrivers: IDriver[]; // Lista separada para combos
+  activeDrivers: IDriver[];
   loading: boolean;
   fetchDrivers: (filters?: IFilterDrivers) => Promise<void>;
   fetchActiveDrivers: () => Promise<void>;
@@ -47,16 +40,12 @@ interface DriverState {
   deleteDriver: (id: string) => Promise<void>;
 }
 
-// --- Creación del Store ---
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const useDriverStore = create<DriverState>((set, _get) => ({
   drivers: [],
   activeDrivers: [],
   loading: false,
 
-  /**
-   * ACCIÓN: Buscar todos los motoristas, aplicando filtros
-   */
   fetchDrivers: async (filters = {}) => {
     set({ loading: true });
     try {
@@ -70,9 +59,6 @@ export const useDriverStore = create<DriverState>((set, _get) => ({
     }
   },
 
-  /**
-   * ACCIÓN: Buscar solo motoristas activos (para combos)
-   */
   fetchActiveDrivers: async () => {
     try {
       const response = await api.get<IDriver[]>('/drivers/active');
@@ -82,32 +68,24 @@ export const useDriverStore = create<DriverState>((set, _get) => ({
     }
   },
 
-  /**
-   * ACCIÓN: Añadir un nuevo motorista
-   */
   addDriver: async (data) => {
     try {
       const response = await api.post<IDriver>('/drivers', data);
       const newDriver = response.data;
-      // Añade al estado (ordenado por ASC, así que lo añadimos al final)
       set((state) => ({
         drivers: [...state.drivers, newDriver],
       }));
       return newDriver;
     } catch (error) {
       console.error('Error al crear motorista:', error);
-      throw error; // Lanza el error para que el modal lo maneje
+      throw error;
     }
   },
 
-  /**
-   * ACCIÓN: Actualizar un motorista
-   */
   updateDriver: async (id, data) => {
     try {
       const response = await api.put<IDriver>(`/drivers/${id}`, data);
       const updatedDriver = response.data;
-      // Actualiza la lista
       set((state) => ({
         drivers: state.drivers.map((d) =>
           d.id === id ? updatedDriver : d
@@ -120,13 +98,9 @@ export const useDriverStore = create<DriverState>((set, _get) => ({
     }
   },
 
-  /**
-   * ACCIÓN: Eliminar un motorista
-   */
   deleteDriver: async (id) => {
     try {
       await api.delete(`/drivers/${id}`);
-      // Elimina del estado
       set((state) => ({
         drivers: state.drivers.filter((d) => d.id !== id),
       }));

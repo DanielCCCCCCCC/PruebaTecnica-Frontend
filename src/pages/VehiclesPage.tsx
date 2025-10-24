@@ -1,8 +1,9 @@
+// src/page/VehiclesPage.tsx
 import React, { useState, useEffect, useMemo, Fragment } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import toast from 'react-hot-toast';
 import type { IVehicle, VehicleFormData } from '../interfaces/Vehicle';
-import { VehicleFormModal } from '../components/vehicles/VehicleFormModal';
+import { VehicleFormModal } from '../components/VehicleFormModal';
 import { useVehicleStore } from '../store/vehicleStore';
 import car_12273888 from '../assets/car_12273888.png';
 
@@ -33,7 +34,6 @@ const PencilIcon: React.FC<SvgIconProps> = (props) => (
     <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
   </svg>
 );
-// Correct Trash Icon
 const TrashIcon: React.FC<SvgIconProps> = (props) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -92,11 +92,9 @@ const AlertIcon: React.FC<SvgIconProps> = (props) => (
   </svg>
 );
 
-// Definimos las columnas que tendrán filtro
 type FilterableColumn = 'placa' | 'marca' | 'modelo';
 
 function VehiclesPage() {
-  // --- ESTADO DEL STORE ---
   const {
     vehicles,
     loading,
@@ -106,14 +104,12 @@ function VehiclesPage() {
     updateVehicle,
   } = useVehicleStore();
 
-  // --- ESTADO LOCAL ---
   const [isFormModalVisible, setIsFormModalVisible] = useState(false);
   const [isConfirmModalVisible, setIsConfirmModalVisible] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [vehicleToEdit, setVehicleToEdit] = useState<IVehicle | null>(null);
   const [vehicleToDelete, setVehicleToDelete] = useState<IVehicle | null>(null);
 
-  // --- ESTADOS DE FILTRO Y PAGINACIÓN ---
   const [globalFilter, setGlobalFilter] = useState<string>('');
   const [columnFilters, setColumnFilters] = useState<
     Record<FilterableColumn, string>
@@ -128,23 +124,19 @@ function VehiclesPage() {
   } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [rowsPerPage] = useState(12); // Ajustado a 12 para tarjetas
+  const [rowsPerPage] = useState(12);
 
-  // Carga inicial
   useEffect(() => {
     fetchVehicles();
   }, [fetchVehicles]);
 
-  // --- LÓGICA DE FILTRADO, ORDENADO Y PAGINACIÓN (CLIENT-SIDE) ---
   const processedVehicles = useMemo(() => {
     const filtered = vehicles.filter((vehicle) => {
-      // Filtro Global
       const globalMatch =
         vehicle.placa.toLowerCase().includes(globalFilter.toLowerCase()) ||
         vehicle.marca.toLowerCase().includes(globalFilter.toLowerCase()) ||
         vehicle.modelo.toLowerCase().includes(globalFilter.toLowerCase());
 
-      // Filtros de Columna
       const columnMatch = (
         Object.keys(columnFilters) as FilterableColumn[]
       ).every((key) =>
@@ -154,7 +146,6 @@ function VehiclesPage() {
       return globalMatch && columnMatch;
     });
 
-    // Ordenado
     if (sortConfig !== null) {
       filtered.sort((a, b) => {
         const valA = a[sortConfig.key];
@@ -167,7 +158,6 @@ function VehiclesPage() {
     return filtered;
   }, [vehicles, globalFilter, columnFilters, sortConfig]);
 
-  // Paginación
   const totalItems = processedVehicles.length;
   const totalPages = Math.ceil(totalItems / rowsPerPage);
   const paginatedVehicles = useMemo(() => {
@@ -175,7 +165,6 @@ function VehiclesPage() {
     return processedVehicles.slice(startIndex, startIndex + rowsPerPage);
   }, [processedVehicles, currentPage, rowsPerPage]);
 
-  // --- HANDLER PARA ORDENAMIENTO (DESDE EL SELECT) ---
   const handleSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
     if (value === '') {
@@ -187,16 +176,14 @@ function VehiclesPage() {
       ];
       setSortConfig({ key, direction });
     }
-    setCurrentPage(1); // Resetear a la primera página al ordenar
+    setCurrentPage(1);
   };
 
   const handleColumnFilterChange = (key: FilterableColumn, value: string) => {
     setColumnFilters((prev) => ({ ...prev, [key]: value }));
-    setCurrentPage(1); // Resetear a la primera página al filtrar
+    setCurrentPage(1);
   };
-  // ---
 
-  // --- MANEJO DE MODALES (sin cambios) ---
   const openNewModal = () => {
     setVehicleToEdit(null);
     setIsFormModalVisible(true);
@@ -218,7 +205,6 @@ function VehiclesPage() {
     setIsConfirmModalVisible(false);
   };
 
-  // --- LÓGICA DE GUARDADO (sin cambios) ---
   const handleSave = async (data: VehicleFormData) => {
     setIsSaving(true);
     const toastId = toast.loading('Guardando...');
@@ -245,7 +231,6 @@ function VehiclesPage() {
     }
   };
 
-  // --- LÓGICA DE ELIMINACIÓN (sin cambios) ---
   const handleDeleteConfirm = async () => {
     if (!vehicleToDelete) return;
     const toastId = toast.loading('Eliminando...');
@@ -264,7 +249,6 @@ function VehiclesPage() {
     hideConfirmModal();
   };
 
-  // --- Clases de Tailwind ---
   const buttonBaseClass =
     'inline-flex items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 transition-colors shadow-sm';
   const primaryButtonClass = `${buttonBaseClass} bg-blue-600 text-white border-transparent hover:bg-blue-700 focus-visible:ring-blue-500 disabled:bg-blue-400`;
@@ -277,7 +261,6 @@ function VehiclesPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-purple-50/30 p-4 md:p-8 text-gray-900 dark:text-gray-100 dark:bg-gray-900">
-      {/* Header */}
       <header className="max-w-8xl mx-auto mb-8">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
@@ -299,16 +282,13 @@ function VehiclesPage() {
               <p className="text-xl font-bold text-gray-800 dark:text-white">
                 {totalItems}
               </p>{' '}
-              {/* Mostrar total filtrado/original */}
             </div>
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="max-w-8xl mx-auto">
         <div className="shadow-2xl rounded-3xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-white/50 dark:border-gray-700/50 overflow-hidden">
-          {/* Toolbar (Botón y Búsqueda Global) */}
           <div className="flex flex-col md:flex-row justify-between items-center gap-4 p-5 border-b border-gray-200 dark:border-gray-700">
             <button onClick={openNewModal} className={primaryButtonClass}>
               <PlusIcon />
@@ -331,10 +311,8 @@ function VehiclesPage() {
             </div>
           </div>
 
-          {/* --- NUEVA SECCIÓN DE FILTROS Y ORDEN --- */}
           <div className="p-5 border-b border-gray-200 dark:border-gray-700">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              {/* Filtro Placa */}
               <div>
                 <label htmlFor="filt_placa" className={labelBaseClass}>
                   Placa
@@ -350,7 +328,6 @@ function VehiclesPage() {
                   }
                 />
               </div>
-              {/* Filtro Marca */}
               <div>
                 <label htmlFor="filt_marca" className={labelBaseClass}>
                   Marca
@@ -366,7 +343,6 @@ function VehiclesPage() {
                   }
                 />
               </div>
-              {/* Filtro Modelo */}
               <div>
                 <label htmlFor="filt_modelo" className={labelBaseClass}>
                   Modelo
@@ -382,7 +358,6 @@ function VehiclesPage() {
                   }
                 />
               </div>
-              {/* Nuevo Sort Select */}
               <div>
                 <label htmlFor="filt_sort" className={labelBaseClass}>
                   Ordenar por
@@ -408,9 +383,7 @@ function VehiclesPage() {
               </div>
             </div>
           </div>
-          {/* --- FIN NUEVA SECCIÓN --- */}
 
-          {/* --- INICIO: REEMPLAZO DE TABLA POR GRID DE TARJETAS --- */}
           <div className="p-4 md:p-6 bg-gray-50/50 dark:bg-gray-900/30">
             {loading ? (
               <div className="py-10 text-center text-gray-500 dark:text-gray-400 italic">
@@ -423,9 +396,7 @@ function VehiclesPage() {
                     key={vehicle.id}
                     className="flex flex-col justify-between rounded-xl bg-white p-4 shadow-lg transition-all duration-200 hover:shadow-2xl dark:bg-gray-800 border border-gray-200 dark:border-gray-700/80"
                   >
-                    {/* Contenido Principal */}
                     <div>
-                      {/* Cabecera de Tarjeta */}
                       <div className="flex items-start justify-between gap-3 mb-3">
                         <div className="flex-1">
                           <h3
@@ -437,7 +408,6 @@ function VehiclesPage() {
                         </div>
                       </div>
 
-                      {/* Detalles */}
                       <div className="space-y-1.5 text-sm">
                         <div className="flex">
                           <span className="w-16 flex-shrink-0 font-medium text-gray-700 dark:text-gray-300">
@@ -458,7 +428,6 @@ function VehiclesPage() {
                       </div>
                     </div>
 
-                    {/* Acciones */}
                     <div className="mt-4 flex justify-end gap-2 border-t border-gray-200 pt-3 dark:border-gray-700">
                       <button
                         onClick={() => openEditModal(vehicle)}
@@ -479,7 +448,6 @@ function VehiclesPage() {
                 ))}
               </div>
             ) : (
-              // Mensaje de no resultados
               <div className="py-10 text-center text-gray-500 dark:text-gray-400 italic">
                 {vehicles.length === 0
                   ? 'No hay vehículos registrados.'
@@ -487,9 +455,7 @@ function VehiclesPage() {
               </div>
             )}
           </div>
-          {/* --- FIN: REEMPLAZO DE TABLA --- */}
 
-          {/* Paginator */}
           {totalPages > 1 && (
             <div className="px-5 py-3 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row items-center sm:justify-between gap-2">
               <span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">
@@ -526,7 +492,6 @@ function VehiclesPage() {
         </div>
       </main>
 
-      {/* Modals */}
       <VehicleFormModal
         visible={isFormModalVisible}
         onHide={hideFormModal}
@@ -536,7 +501,6 @@ function VehiclesPage() {
       />
       <Transition appear show={isConfirmModalVisible} as={Fragment}>
         <Dialog as="div" className="relative z-10" onClose={hideConfirmModal}>
-          {/* Background overlay */}
           <Transition.Child
             as={Fragment}
             enter="ease-out duration-300"
@@ -548,7 +512,6 @@ function VehiclesPage() {
           >
             <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" />
           </Transition.Child>
-          {/* Modal content */}
           <div className="fixed inset-0 overflow-y-auto">
             <div className="flex min-h-full items-center justify-center p-4 text-center">
               <Transition.Child
@@ -606,7 +569,6 @@ function VehiclesPage() {
         </Dialog>
       </Transition>
 
-      {/* Footer */}
       <footer className="mt-8 text-center">
         <p className="text-sm text-gray-400 dark:text-gray-500">
           Sistema de Gestión Vehicular &copy; {new Date().getFullYear()}
