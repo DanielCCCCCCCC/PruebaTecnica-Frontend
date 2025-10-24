@@ -6,10 +6,13 @@ import { useRecordStore } from '../store/recordStore';
 import type {
   IRecord,
   ICreateRecord,
-  IFilterRecords,
-} from '../interfaces/IRecord';
+  IFilterRecords} from '../interfaces/IRecord'; // Adjusted import path if RecordTypeEnum is there
 import { RecordFormModal } from '../components/RecordFormModal';
 
+// Define possible sort keys explicitly for better type safety
+type SortableRecordKey = keyof IRecord | 'vehicle.placa' | 'driver.nombre';
+
+// --- Icons (Keep existing icon components) ---
 interface SvgIconProps extends React.SVGProps<SVGSVGElement> {
   className?: string;
 }
@@ -85,26 +88,46 @@ const DocumentTextIcon: React.FC<SvgIconProps> = (props) => (
     />
   </svg>
 );
+// --- End Icons ---
 
+
+// --- Helper Functions ---
 const formatDate = (date: Date | string) => {
-  return new Date(date).toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    timeZone: 'UTC',
-  });
+  try {
+    return new Date(date).toLocaleDateString('es-HN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      timeZone: 'UTC',
+    });
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  } catch (e) {
+    console.warn("Invalid date passed to formatDate:", date);
+    return 'Fecha inválida';
+  }
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const getSortValue = (obj: IRecord, key: string): any => {
-  if (key === 'vehicle.placa') return obj.vehicle?.placa || '';
-  if (key === 'driver.nombre') return obj.driver?.nombre || '';
-  // Asegurarnos de que la clave es válida para IRecord
-  if (key in obj) {
-    return obj[key as keyof IRecord];
+const getSortValue = (obj: IRecord, key: SortableRecordKey): string | number | Date | boolean | null => {
+  if (!obj) return null;
+
+  if (key === 'vehicle.placa') return obj.vehicle?.placa?.toLowerCase() ?? '';
+  if (key === 'driver.nombre') return obj.driver?.nombre?.toLowerCase() ?? '';
+
+  const value = obj[key as keyof IRecord];
+
+  if (value instanceof Date) {
+    return value;
   }
-  return '';
+  if (typeof value === 'string') {
+    return value.toLowerCase();
+  }
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return value;
+  }
+  return null;
 };
+// --- End Helper Functions ---
+
 
 function RecordsPage() {
   const {
@@ -119,26 +142,30 @@ function RecordsPage() {
     deleteRecord,
   } = useRecordStore();
 
+  // --- Local State ---
   const [isFormModalVisible, setIsFormModalVisible] = useState(false);
   const [isConfirmModalVisible, setIsConfirmModalVisible] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [recordToEdit, setRecordToEdit] = useState<IRecord | null>(null);
   const [recordToDelete, setRecordToDelete] = useState<IRecord | null>(null);
+
   const [vehicleFilter, setVehicleFilter] = useState('');
   const [driverFilter, setDriverFilter] = useState('');
-  const [typeFilter, setTypeFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState<'' | 'entrada' | 'salida'>('');
   const [startDateFilter, setStartDateFilter] = useState('');
   const [endDateFilter, setEndDateFilter] = useState('');
+
   const [activeFilters, setActiveFilters] = useState<IFilterRecords>({});
 
   const [sortConfig, setSortConfig] = useState<{
-    key: string;
+    key: SortableRecordKey;
     direction: 'asc' | 'desc';
-  } | null>(null);
+  } | null>({ key: 'fecha', direction: 'desc' });
   const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage] = useState(12); 
+  const [rowsPerPage] = useState(12);
+  // --- End Local State ---
 
-  // Carga inicial (Sin cambios)
+  // --- Effects ---
   useEffect(() => {
     fetchRecords(activeFilters);
   }, [fetchRecords, activeFilters]);
@@ -146,13 +173,21 @@ function RecordsPage() {
   useEffect(() => {
     fetchFilterOptions();
   }, [fetchFilterOptions]);
+  // --- End Effects ---
 
+
+  // --- Data Processing (Memoized) ---
   const processedRecords = useMemo(() => {
     const sorted = [...records];
     if (sortConfig !== null) {
       sorted.sort((a, b) => {
         const valA = getSortValue(a, sortConfig.key);
         const valB = getSortValue(b, sortConfig.key);
+
+        if (valA === null && valB === null) return 0;
+        if (valA === null) return 1;
+        if (valB === null) return -1;
+
         if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
         if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
         return 0;
@@ -167,30 +202,62 @@ function RecordsPage() {
     const startIndex = (currentPage - 1) * rowsPerPage;
     return processedRecords.slice(startIndex, startIndex + rowsPerPage);
   }, [processedRecords, currentPage, rowsPerPage]);
+  // --- End Data Processing ---
 
+
+  // --- Event Handlers ---
   const handleSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
     if (value === '') {
       setSortConfig(null);
     } else {
-      const [key, direction] = value.split('-') as [string, 'asc' | 'desc'];
-      setSortConfig({ key, direction });
+      const [key, direction] = value.split('-') as [SortableRecordKey, 'asc' | 'desc'];
+      if (key && direction) {
+        setSortConfig({ key, direction });
+      } else {
+        setSortConfig(null);
+      }
     }
-    setCurrentPage(1); 
+    setCurrentPage(1);
   };
 
   const handleFilterSubmit = () => {
+    let endDateForApi: Date | undefined = undefined;
+    if (endDateFilter) {
+      try {
+        const end = new Date(endDateFilter + 'T00:00:00.000Z');
+        end.setUTCDate(end.getUTCDate() + 1);
+        end.setUTCMilliseconds(end.getUTCMilliseconds() - 1);
+        endDateForApi = end;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      } catch (e) {
+        console.error("Invalid end date:", endDateFilter);
+        toast.error("Fecha Fin inválida.");
+        return;
+      }
+    }
+
+    let startDateForApi: Date | undefined = undefined;
+    if (startDateFilter) {
+      try {
+        startDateForApi = new Date(startDateFilter + 'T00:00:00.000Z');
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      } catch (e) {
+        console.error("Invalid start date:", startDateFilter);
+        toast.error("Fecha Inicio inválida.");
+        return;
+      }
+    }
+
     const newFilters: IFilterRecords = {
       vehicleId: vehicleFilter || undefined,
       driverId: driverFilter || undefined,
-      tipo: typeFilter ? typeFilter.toUpperCase() : undefined,
-      startDate: startDateFilter
-        ? new Date(startDateFilter + 'T00:00:00')
-        : undefined,
-      endDate: endDateFilter
-        ? new Date(endDateFilter + 'T00:00:00') 
-        : undefined,
+      tipo: typeFilter || undefined,
+      startDate: startDateForApi,
+      endDate: endDateForApi,
     };
+
+    console.log("Applying Filters:", newFilters);
     setActiveFilters(newFilters);
     setCurrentPage(1);
   };
@@ -201,8 +268,14 @@ function RecordsPage() {
     setDriverFilter('');
     setStartDateFilter('');
     setEndDateFilter('');
+    setSortConfig({ key: 'fecha', direction: 'desc' });
     setActiveFilters({});
     setCurrentPage(1);
+  };
+
+  const handleTypeFilterChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const newValue = event.target.value as '' | 'entrada' | 'salida';
+    setTypeFilter(newValue);
   };
 
   const openNewModal = () => {
@@ -250,7 +323,6 @@ function RecordsPage() {
     }
   };
 
-  // --- LÓGICA DE ELIMINACIÓN (Sin cambios) ---
   const handleDeleteConfirm = async () => {
     if (!recordToDelete) return;
     const toastId = toast.loading('Eliminando...');
@@ -267,7 +339,10 @@ function RecordsPage() {
     }
     hideConfirmModal();
   };
+  // --- End Event Handlers ---
 
+
+  // --- Tailwind Classes ---
   const buttonBaseClass =
     'inline-flex items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 transition-colors shadow-sm';
   const primaryButtonClass = `${buttonBaseClass} bg-blue-600 text-white border-transparent hover:bg-blue-700 focus-visible:ring-blue-500 disabled:bg-blue-400`;
@@ -277,17 +352,11 @@ function RecordsPage() {
     'block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:focus:border-blue-400 dark:focus:ring-blue-400';
   const labelBaseClass =
     'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1';
+  // --- End Tailwind Classes ---
 
-  const handleTypeFilterChange = (
-    event: React.ChangeEvent<HTMLSelectElement>,
-  ) => {
-    const newValue = event.target.value;
-    setTypeFilter(newValue);
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-purple-50/30 p-4 md:p-8 text-gray-900 dark:text-gray-100 dark:bg-gray-900">
-      {/* Header (Sin cambios) */}
       <header className="max-w-8xl mx-auto mb-8">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
@@ -314,14 +383,12 @@ function RecordsPage() {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="max-w-8xl mx-auto">
         <div className="shadow-2xl rounded-3xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-white/50 dark:border-gray-700/50 overflow-hidden">
           <div className="p-5 border-b border-gray-200 dark:border-gray-700">
             <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-4">
               <button onClick={openNewModal} className={primaryButtonClass}>
-                <PlusIcon />
-                Nuevo Registro
+                <PlusIcon /> Nuevo Registro
               </button>
               <span className="text-lg font-semibold text-gray-700 dark:text-gray-200">
                 Filtros y Orden
@@ -329,101 +396,44 @@ function RecordsPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {/* Filtro Vehículos */}
               <div>
-                <label htmlFor="filt_vehicle" className={labelBaseClass}>
-                  Vehículo
-                </label>
-                <select
-                  id="filt_vehicle"
-                  className={inputBaseClass}
-                  value={vehicleFilter}
-                  onChange={(e) => setVehicleFilter(e.target.value)}
-                  disabled={loadingFilters}
-                >
+                <label htmlFor="filt_vehicle" className={labelBaseClass}>Vehículo</label>
+                <select id="filt_vehicle" className={inputBaseClass} value={vehicleFilter} onChange={(e) => setVehicleFilter(e.target.value)} disabled={loadingFilters}>
                   <option value="">Todos</option>
-                  {filterOptions.vehicles.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.placa} ({v.marca})
-                    </option>
-                  ))}
+                  {filterOptions.vehicles.map((v) => ( <option key={v.id} value={v.id}> {v.placa} ({v.marca}) </option> ))}
                 </select>
               </div>
 
               <div>
-                <label htmlFor="filt_driver" className={labelBaseClass}>
-                  Motorista
-                </label>
-                <select
-                  id="filt_driver"
-                  className={inputBaseClass}
-                  value={driverFilter}
-                  onChange={(e) => setDriverFilter(e.target.value)}
-                  disabled={loadingFilters}
-                >
+                <label htmlFor="filt_driver" className={labelBaseClass}>Motorista</label>
+                <select id="filt_driver" className={inputBaseClass} value={driverFilter} onChange={(e) => setDriverFilter(e.target.value)} disabled={loadingFilters}>
                   <option value="">Todos</option>
-                  {filterOptions.drivers?.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.nombre}
-                    </option>
-                  ))}
+                  {filterOptions.drivers?.map((d) => ( <option key={d.id} value={d.id}> {d.nombre} </option> ))}
                 </select>
               </div>
+
               <div>
-                <label htmlFor="filt_tipo" className={labelBaseClass}>
-                  Tipo
-                </label>
-                <select
-                  id="filt_tipo"
-                  className={inputBaseClass}
-                  value={typeFilter}
-                  onChange={handleTypeFilterChange}
-                >
+                <label htmlFor="filt_tipo" className={labelBaseClass}>Tipo</label>
+                <select id="filt_tipo" className={inputBaseClass} value={typeFilter} onChange={handleTypeFilterChange} >
                   <option value="">Todos</option>
-                  <option value="ENTRADA">Entrada</option>
-                  <option value="SALIDA">Salida</option>
+                  <option value="entrada">Entrada</option>
+                  <option value="salida">Salida</option>
                 </select>
               </div>
+
               <div>
-                <label htmlFor="filt_start" className={labelBaseClass}>
-                  Fecha Inicio
-                </label>
-                <input
-                  id="filt_start"
-                  type="date"
-                  className={inputBaseClass}
-                  value={startDateFilter}
-                  onChange={(e) => setStartDateFilter(e.target.value)}
-                />
+                <label htmlFor="filt_start" className={labelBaseClass}>Fecha Inicio</label>
+                <input id="filt_start" type="date" className={inputBaseClass} value={startDateFilter} onChange={(e) => setStartDateFilter(e.target.value)} />
               </div>
+
               <div>
-                <label htmlFor="filt_end" className={labelBaseClass}>
-                  Fecha Fin
-                </label>
-                <input
-                  id="filt_end"
-                  type="date"
-                  className={inputBaseClass}
-                  value={endDateFilter}
-                  onChange={(e) => setEndDateFilter(e.target.value)}
-                />
+                <label htmlFor="filt_end" className={labelBaseClass}>Fecha Fin</label>
+                <input id="filt_end" type="date" className={inputBaseClass} value={endDateFilter} onChange={(e) => setEndDateFilter(e.target.value)} />
               </div>
-              
+
               <div>
-                <label htmlFor="filt_sort" className={labelBaseClass}>
-                  Ordenar por
-                </label>
-                <select
-                  id="filt_sort"
-                  className={inputBaseClass}
-                  value={
-                    sortConfig
-                      ? `${sortConfig.key}-${sortConfig.direction}`
-                      : ''
-                  }
-                  onChange={handleSortChange}
-                >
-                  <option value="">Por defecto</option>
+                <label htmlFor="filt_sort" className={labelBaseClass}>Ordenar por</label>
+                <select id="filt_sort" className={inputBaseClass} value={ sortConfig ? `${sortConfig.key}-${sortConfig.direction}` : '' } onChange={handleSortChange} >
                   <option value="fecha-desc">Fecha (Más reciente)</option>
                   <option value="fecha-asc">Fecha (Más antiguo)</option>
                   <option value="kilometraje-desc">KM (Mayor a menor)</option>
@@ -434,110 +444,46 @@ function RecordsPage() {
                   <option value="driver.nombre-desc">Motorista (Z-A)</option>
                   <option value="tipo-asc">Tipo (A-Z)</option>
                   <option value="tipo-desc">Tipo (Z-A)</option>
+                  <option value="">Sin Orden</option>
                 </select>
               </div>
             </div>
             <div className="flex justify-end gap-3 mt-4">
-              <button onClick={handleFilterClear} className={secondaryButtonClass}>
-                Limpiar
-              </button>
-              <button onClick={handleFilterSubmit} className={primaryButtonClass}>
-                Aplicar Filtros
-              </button>
+              <button onClick={handleFilterClear} className={secondaryButtonClass}> Limpiar </button>
+              <button onClick={handleFilterSubmit} className={primaryButtonClass}> Aplicar Filtros </button>
             </div>
           </div>
 
           <div className="p-4 md:p-6 bg-gray-50/50 dark:bg-gray-900/30">
-            {loading ? (
-              <div className="py-10 text-center text-gray-500 dark:text-gray-400 italic">
-                Cargando registros...
-              </div>
-            ) : paginatedRecords.length > 0 ? (
+            {loading ? ( <div className="py-10 text-center text-gray-500 dark:text-gray-400 italic"> Cargando registros... </div> )
+             : paginatedRecords.length > 0 ? (
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {paginatedRecords.map((record) => (
-                  <div
-                    key={record.id}
-                    className="flex flex-col justify-between rounded-xl bg-white p-4 shadow-lg transition-all duration-200 hover:shadow-2xl dark:bg-gray-800 border border-gray-200 dark:border-gray-700/80"
-                  >
+                  <div key={record.id} className="flex flex-col justify-between rounded-xl bg-white p-4 shadow-lg transition-all duration-200 hover:shadow-2xl dark:bg-gray-800 border border-gray-200 dark:border-gray-700/80">
                     <div>
                       <div className="flex items-start justify-between gap-3 mb-3">
-                        <div className="flex-1">
-                          <h3
-                            className="text-lg font-bold text-blue-700 dark:text-blue-400 truncate"
-                            title={record.vehicle?.placa}
-                          >
-                            {record.vehicle?.placa || (
-                              <span className="italic text-gray-400">N/A</span>
-                            )}
-                          </h3>
-                          <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                            {record.vehicle?.marca} {record.vehicle?.modelo}
-                          </p>
-                        </div>
-                        <span
-                          className={`flex-shrink-0 px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            record.tipo === 'SALIDA'
-                              ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-                              : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                          }`}
-                        >
-                          {record.tipo}
-                        </span>
+                         <div className="flex-1">
+                           <h3 className="text-lg font-bold text-blue-700 dark:text-blue-400 truncate" title={record.vehicle?.placa}>
+                             {record.vehicle?.placa || <span className="italic text-gray-400">N/A</span>}
+                           </h3>
+                           <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                             {record.vehicle?.marca} {record.vehicle?.modelo}
+                           </p>
+                         </div>
+                         <span className={`flex-shrink-0 px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${ record.tipo === 'salida' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' }`}>
+                           {record.tipo.charAt(0).toUpperCase() + record.tipo.slice(1)}
+                         </span>
                       </div>
-
                       <div className="space-y-1.5 text-sm">
-                        <div className="flex">
-                          <span className="w-20 flex-shrink-0 font-medium text-gray-700 dark:text-gray-300">
-                            Motorista:
-                          </span>
-                          <span className="text-gray-600 dark:text-gray-400 truncate">
-                            {record.driver?.nombre || (
-                              <span className="italic text-gray-400">N/A</span>
-                            )}
-                          </span>
-                        </div>
-                        <div className="flex">
-                          <span className="w-20 flex-shrink-0 font-medium text-gray-700 dark:text-gray-300">
-                            Fecha:
-                          </span>
-                          <span className="text-gray-600 dark:text-gray-400">
-                            {formatDate(record.fecha)}
-                          </span>
-                        </div>
-                        <div className="flex">
-                          <span className="w-20 flex-shrink-0 font-medium text-gray-700 dark:text-gray-300">
-                            Hora:
-                          </span>
-                          <span className="text-gray-600 dark:text-gray-400">
-                            {record.hora}
-                          </span>
-                        </div>
-                        <div className="flex">
-                          <span className="w-20 flex-shrink-0 font-medium text-gray-700 dark:text-gray-300">
-                            Kilometraje:
-                          </span>
-                          <span className="text-gray-600 dark:text-gray-400">
-                            {record.kilometraje.toLocaleString()} km
-                          </span>
-                        </div>
+                         <div className="flex"><span className="w-20 flex-shrink-0 font-medium text-gray-700 dark:text-gray-300">Motorista:</span><span className="text-gray-600 dark:text-gray-400 truncate">{record.driver?.nombre || <span className="italic text-gray-400">N/A</span>}</span></div>
+                         <div className="flex"><span className="w-20 flex-shrink-0 font-medium text-gray-700 dark:text-gray-300">Fecha:</span><span className="text-gray-600 dark:text-gray-400">{formatDate(record.fecha)}</span></div>
+                         <div className="flex"><span className="w-20 flex-shrink-0 font-medium text-gray-700 dark:text-gray-300">Hora:</span><span className="text-gray-600 dark:text-gray-400">{record.hora}</span></div>
+                         <div className="flex"><span className="w-20 flex-shrink-0 font-medium text-gray-700 dark:text-gray-300">Kilometraje:</span><span className="text-gray-600 dark:text-gray-400">{record.kilometraje.toLocaleString()} km</span></div>
                       </div>
                     </div>
-
                     <div className="mt-4 flex justify-end gap-2 border-t border-gray-200 pt-3 dark:border-gray-700">
-                      <button
-                        onClick={() => openEditModal(record)}
-                        className="rounded-md p-1 text-blue-600 transition-colors hover:bg-blue-100 hover:text-blue-800 dark:hover:bg-blue-900/50"
-                        title="Editar"
-                      >
-                        <PencilIcon />
-                      </button>
-                      <button
-                        onClick={() => openConfirmModal(record)}
-                        className="rounded-md p-1 text-red-600 transition-colors hover:bg-red-100 hover:text-red-800 dark:hover:bg-red-900/50"
-                        title="Eliminar"
-                      >
-                        <TrashIcon />
-                      </button>
+                       <button onClick={() => openEditModal(record)} className="rounded-md p-1 text-blue-600 transition-colors hover:bg-blue-100 hover:text-blue-800 dark:hover:bg-blue-900/50" title="Editar"><PencilIcon /></button>
+                       <button onClick={() => openConfirmModal(record)} className="rounded-md p-1 text-red-600 transition-colors hover:bg-red-100 hover:text-red-800 dark:hover:bg-red-900/50" title="Eliminar"><TrashIcon /></button>
                     </div>
                   </div>
                 ))}
