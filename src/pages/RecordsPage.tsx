@@ -139,7 +139,7 @@ function RecordsPage() {
   const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [rowsPerPage, setRowsPerPage] = useState(10); // Seteado a 10
+  const [rowsPerPage] = useState(10); // Seteado a 10
 
   // Carga inicial
   useEffect(() => {

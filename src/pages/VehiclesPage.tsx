@@ -70,7 +70,7 @@ function VehiclesPage() {
   const [sortConfig, setSortConfig] = useState<{ key: keyof IVehicle, direction: 'asc' | 'desc' } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [rowsPerPage, setRowsPerPage] = useState(10); // Opciones: 5, 10, 25
+  const [rowsPerPage] = useState(10); // Opciones: 5, 10, 25
 
   // Carga inicial
   useEffect(() => {
