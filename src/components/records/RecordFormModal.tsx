@@ -26,6 +26,14 @@ interface VehicleOption {
 }
 
 // Props del modal
+// export interface RecordModalProps {
+//   visible: boolean;
+//   onHide: () => void;
+//   recordToEdit: IRecord | null;
+//   onSave: (data: ICreateRecord) => Promise<void>;
+//   isSaving: boolean;
+//   vehicles: VehicleOption[]; // Lista de vehículos para el <select>
+// }
 export interface RecordModalProps {
   visible: boolean;
   onHide: () => void;
@@ -33,8 +41,14 @@ export interface RecordModalProps {
   onSave: (data: ICreateRecord) => Promise<void>;
   isSaving: boolean;
   vehicles: VehicleOption[]; // Lista de vehículos para el <select>
+  
+  // 👇 AÑADE ESTA LÍNEA:
+  drivers: {
+    id: string;
+    nombre: string;
+    licencia: string;
+  }[];
 }
-
 // Icono para cerrar
 const XMarkIcon = ({ className = 'w-6 h-6' }) => (
   <svg

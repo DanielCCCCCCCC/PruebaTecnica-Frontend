@@ -1,8 +1,13 @@
-import React, { useState, useEffect, useMemo, Fragment } from 'react'; // <-- Se añadió useMemo
+import React, { useState, useEffect, useMemo, Fragment } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import toast from 'react-hot-toast';
 import { useDriverStore } from '../store/driverStore';
-import type { IDriver, ICreateDriver, IUpdateDriver, IFilterDrivers } from '../store/driverStore';
+import type {
+  IDriver,
+  ICreateDriver,
+  IUpdateDriver,
+  IFilterDrivers,
+} from '../store/driverStore';
 import { DriverFormModal } from '../components/drivers/DriverFormModal';
 
 // --- Iconos ---
@@ -93,7 +98,6 @@ const getSortValue = (obj: IDriver, key: string): any => {
   return '';
 };
 
-
 function DriversPage() {
   // --- ESTADO DEL STORE ---
   const {
@@ -121,10 +125,13 @@ function DriversPage() {
   const [activeFilters, setActiveFilters] = useState<IFilterDrivers>({});
 
   // --- NUEVOS ESTADOS DE ORDEN Y PAGINACIÓN ---
-  const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
+  const [sortConfig, setSortConfig] = useState<{
+    key: string;
+    direction: 'asc' | 'desc';
+  } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [rowsPerPage] = useState(10); // Seteado a 10
+  const [rowsPerPage] = useState(12); // Ajustado para layout de tarjetas
 
   // Carga inicial
   useEffect(() => {
@@ -154,13 +161,15 @@ function DriversPage() {
     return processedDrivers.slice(startIndex, startIndex + rowsPerPage);
   }, [processedDrivers, currentPage, rowsPerPage]);
 
-  // --- FUNCIÓN PARA SOLICITAR ORDEN ---
-  const requestSort = (key: string) => {
-    let direction: 'asc' | 'desc' = 'asc';
-    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
+  // --- NUEVO HANDLER PARA ORDENAMIENTO (DESDE EL SELECT) ---
+  const handleSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    if (value === '') {
+      setSortConfig(null);
+    } else {
+      const [key, direction] = value.split('-') as [string, 'asc' | 'desc'];
+      setSortConfig({ key, direction });
     }
-    setSortConfig({ key, direction });
     setCurrentPage(1); // Resetear a la primera página al ordenar
   };
 
@@ -219,8 +228,8 @@ function DriversPage() {
       }
       setIsSaving(false);
       hideFormModal();
-      // Refrescar la lista para orden ASC
-      handleFilterSubmit(); 
+      // Refrescar la lista
+      handleFilterSubmit();
     } catch (error) {
       console.error(error);
       setIsSaving(false);
@@ -260,9 +269,6 @@ function DriversPage() {
     'block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:focus:border-blue-400 dark:focus:ring-blue-400';
   const labelBaseClass =
     'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1';
-  // NUEVAS CLASES PARA ENCABEZADOS DE TABLA
-  const thClass = "px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider";
-  const thSortableClass = `${thClass} cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700`;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-purple-50/30 p-4 md:p-8 text-gray-900 dark:text-gray-100 dark:bg-gray-900">
@@ -304,12 +310,13 @@ function DriversPage() {
                 Nuevo Motorista
               </button>
               <span className="text-lg font-semibold text-gray-700 dark:text-gray-200">
-                Filtros
+                Filtros y Orden
               </span>
             </div>
 
-            {/* Fila de Filtros */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Fila de Filtros y Orden (AHORA 4 COLUMNAS) */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {/* Filtro Nombre */}
               <div>
                 <label htmlFor="filt_nombre" className={labelBaseClass}>
                   Nombre
@@ -323,6 +330,7 @@ function DriversPage() {
                   onChange={(e) => setNombreFilter(e.target.value)}
                 />
               </div>
+              {/* Filtro Licencia */}
               <div>
                 <label htmlFor="filt_licencia" className={labelBaseClass}>
                   Licencia
@@ -336,6 +344,7 @@ function DriversPage() {
                   onChange={(e) => setLicenciaFilter(e.target.value)}
                 />
               </div>
+              {/* Filtro Estado */}
               <div>
                 <label htmlFor="filt_activo" className={labelBaseClass}>
                   Estado
@@ -352,7 +361,28 @@ function DriversPage() {
                   <option value="false">Inactivos</option>
                 </select>
               </div>
+              {/* NUEVO: Ordenamiento */}
+              <div>
+                <label htmlFor="filt_sort" className={labelBaseClass}>
+                  Ordenar por
+                </label>
+                <select
+                  id="filt_sort"
+                  className={inputBaseClass}
+                  value={sortConfig ? `${sortConfig.key}-${sortConfig.direction}` : ''}
+                  onChange={handleSortChange}
+                >
+                  <option value="">Por defecto</option>
+                  <option value="nombre-asc">Nombre (A-Z)</option>
+                  <option value="nombre-desc">Nombre (Z-A)</option>
+                  <option value="licencia-asc">Licencia (A-Z)</option>
+                  <option value="licencia-desc">Licencia (Z-A)</option>
+                  <option value="activo-desc">Estado (Inactivo primero)</option>
+                  <option value="activo-asc">Estado (Activo primero)</option>
+                </select>
+              </div>
             </div>
+
             {/* Botones de Filtro */}
             <div className="flex justify-end gap-3 mt-4">
               <button onClick={handleFilterClear} className={secondaryButtonClass}>
@@ -364,77 +394,37 @@ function DriversPage() {
             </div>
           </div>
 
-          {/* Table (ACTUALIZADA) */}
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-700/50">
-                <tr>
-                  {/* ENCABEZADOS DE TABLA ACTUALIZADOS CON SORTING */}
-                  <th
-                    scope="col"
-                    className={thSortableClass}
-                    onClick={() => requestSort('nombre')}
+          {/* --- INICIO: REEMPLAZO DE TABLA POR GRID DE TARJETAS --- */}
+          <div className="p-4 md:p-6 bg-gray-50/50 dark:bg-gray-900/30">
+            {loading ? (
+              <div className="py-10 text-center text-gray-500 dark:text-gray-400 italic">
+                Cargando motoristas...
+              </div>
+            ) : paginatedDrivers.length > 0 ? (
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {paginatedDrivers.map((driver) => (
+                  <div
+                    key={driver.id}
+                    className="flex flex-col justify-between rounded-xl bg-white p-4 shadow-lg transition-all duration-200 hover:shadow-2xl dark:bg-gray-800 border border-gray-200 dark:border-gray-700/80"
                   >
-                    Nombre
-                  </th>
-                  <th
-                    scope="col"
-                    className={thSortableClass}
-                    onClick={() => requestSort('licencia')}
-                  >
-                    Licencia
-                  </th>
-                  <th scope="col" className={thClass}> {/* Sin ordenar */}
-                    Contacto
-                  </th>
-                  <th
-                    scope="col"
-                    className={thSortableClass}
-                    onClick={() => requestSort('activo')}
-                  >
-                    Estado
-                  </th>
-                  <th scope="col" className={thClass}> {/* Sin ordenar */}
-                    Acciones
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {loading ? (
-                  <tr>
-                    <td
-                      colSpan={5}
-                      className="px-6 py-10 text-center text-gray-500 dark:text-gray-400 italic"
-                    >
-                      Cargando motoristas...
-                    </td>
-                  </tr>
-                // ACTUALIZADO: Mapear sobre 'paginatedDrivers'
-                ) : paginatedDrivers.length > 0 ? (
-                  paginatedDrivers.map((driver) => (
-                    <tr
-                      key={driver.id}
-                      className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-150"
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                        {driver.nombre}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
-                        {driver.licencia}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
-                        {driver.telefono && (
-                          <span className="block">{driver.telefono}</span>
-                        )}
-                        {driver.email && (
-                          <span className="block text-xs text-gray-500">
-                            {driver.email}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    {/* Contenido Principal de la Tarjeta */}
+                    <div>
+                      <div className="flex items-start justify-between gap-3 mb-3">
+                        {/* Nombre y Licencia */}
+                        <div className="flex-1">
+                          <h3
+                            className="text-lg font-bold text-gray-900 dark:text-white truncate"
+                            title={driver.nombre}
+                          >
+                            {driver.nombre}
+                          </h3>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            Lic: {driver.licencia}
+                          </p>
+                        </div>
+                        {/* Badge de Estado */}
                         <span
-                          className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          className={`flex-shrink-0 px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
                             driver.activo
                               ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
                               : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
@@ -442,64 +432,90 @@ function DriversPage() {
                         >
                           {driver.activo ? 'Activo' : 'Inactivo'}
                         </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
-                        <div className="flex justify-center gap-2">
-                          <button
-                            onClick={() => openEditModal(driver)}
-                            className="text-blue-600 hover:text-blue-800 p-1 rounded-md hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
-                            title="Editar"
-                          >
-                            <PencilIcon />
-                          </button>
-                          <button
-                            onClick={() => openConfirmModal(driver)}
-                            className="text-red-600 hover:text-red-800 p-1 rounded-md hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors"
-                            title="Eliminar"
-                          >
-                            <TrashIcon />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td
-                      colSpan={5}
-                      className="px-6 py-10 text-center text-gray-500 dark:text-gray-400 italic"
-                    >
-                      {/* Lógica de mensaje 'No resultados' actualizada */}
-                      {drivers.length === 0 && Object.keys(activeFilters).length === 0
-                        ? 'No hay motoristas registrados.'
-                        : 'No se encontraron motoristas con los filtros.'}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                      </div>
 
-          {/* --- NUEVO PAGINADOR --- */}
+                      {/* Detalles de Contacto */}
+                      <div className="space-y-1.5 text-sm">
+                        {driver.telefono && (
+                          <div className="flex">
+                            <span className="w-14 flex-shrink-0 font-medium text-gray-700 dark:text-gray-300">
+                              Tel:
+                            </span>
+                            <span className="text-gray-600 dark:text-gray-400">
+                              {driver.telefono}
+                            </span>
+                          </div>
+                        )}
+                        {driver.email && (
+                          <div className="flex">
+                            <span className="w-14 flex-shrink-0 font-medium text-gray-700 dark:text-gray-300">
+                              Email:
+                            </span>
+                            <span
+                              className="text-gray-600 dark:text-gray-400 truncate"
+                              title={driver.email}
+                            >
+                              {driver.email}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Acciones en el pie de la tarjeta */}
+                    <div className="mt-4 flex justify-end gap-2 border-t border-gray-200 pt-3 dark:border-gray-700">
+                      <button
+                        onClick={() => openEditModal(driver)}
+                        className="rounded-md p-1 text-blue-600 transition-colors hover:bg-blue-100 hover:text-blue-800 dark:hover:bg-blue-900/50"
+                        title="Editar"
+                      >
+                        <PencilIcon />
+                      </button>
+                      <button
+                        onClick={() => openConfirmModal(driver)}
+                        className="rounded-md p-1 text-red-600 transition-colors hover:bg-red-100 hover:text-red-800 dark:hover:bg-red-900/50"
+                        title="Eliminar"
+                      >
+                        <TrashIcon />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              // Mensaje de no resultados
+              <div className="py-10 text-center text-gray-500 dark:text-gray-400 italic">
+                {drivers.length === 0 && Object.keys(activeFilters).length === 0
+                  ? 'No hay motoristas registrados.'
+                  : 'No se encontraron motoristas con los filtros.'}
+              </div>
+            )}
+          </div>
+          {/* --- FIN: REEMPLAZO DE TABLA --- */}
+
+          {/* --- PAGINADOR (Se mantiene igual) --- */}
           {totalPages > 1 && (
-            <div className="px-5 py-3 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row items-center sm:justify-between gap-2">
-              <span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">
-                Mostrando {Math.min((currentPage - 1) * rowsPerPage + 1, totalItems)} 
-                {" "}a {Math.min(currentPage * rowsPerPage, totalItems)} de {totalItems} registros
+            <div className="flex flex-col items-center gap-2 border-t border-gray-200 bg-gray-50 px-5 py-3 sm:flex-row sm:justify-between dark:border-gray-700 dark:bg-gray-700/50">
+              <span className="text-xs text-gray-700 sm:text-sm dark:text-gray-300">
+                Mostrando {Math.min((currentPage - 1) * rowsPerPage + 1, totalItems)}{' '}
+                a {Math.min(currentPage * rowsPerPage, totalItems)} de {totalItems}{' '}
+                registros
               </span>
               <div className="inline-flex items-center gap-1">
                 <button
-                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                   disabled={currentPage === 1}
                   className={`${secondaryButtonClass} rounded-r-none px-3 py-1 text-xs`}
                 >
                   Anterior
                 </button>
-                  <span className="text-xs text-gray-600 dark:text-gray-400 px-2">
-                    Pág {currentPage} de {totalPages}
-                  </span>
+                <span className="px-2 text-xs text-gray-600 dark:text-gray-400">
+                  Pág {currentPage} de {totalPages}
+                </span>
                 <button
-                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                  }
                   disabled={currentPage === totalPages}
                   className={`${secondaryButtonClass} rounded-l-none px-3 py-1 text-xs`}
                 >
@@ -509,11 +525,10 @@ function DriversPage() {
             </div>
           )}
           {/* --- FIN DEL PAGINADOR --- */}
-
         </div>
       </main>
 
-      {/* Modals */}
+      {/* Modals (Se mantienen iguales) */}
       <DriverFormModal
         visible={isFormModalVisible}
         onHide={hideFormModal}
@@ -549,7 +564,7 @@ function DriversPage() {
               >
                 <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all dark:bg-gray-800">
                   <div className="flex items-start">
-                    <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/50 sm:mx-0 sm:h-10 sm:w-10">
+                    <div className="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10 dark:bg-red-900/50">
                       <AlertIcon className="h-6 w-6 text-red-600 dark:text-red-400" />
                     </div>
                     <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
@@ -562,8 +577,8 @@ function DriversPage() {
                       <div className="mt-2">
                         <p className="text-sm text-gray-500 dark:text-gray-400">
                           ¿Estás seguro de eliminar al motorista{' '}
-                          <strong>{driverToDelete?.nombre}</strong>?
-                          Esta acción no se puede deshacer.
+                          <strong>{driverToDelete?.nombre}</strong>? Esta acción no
+                          se puede deshacer.
                         </p>
                       </div>
                     </div>
@@ -593,7 +608,7 @@ function DriversPage() {
         </Dialog>
       </Transition>
 
-      {/* Footer */}
+      {/* Footer (Se mantiene igual) */}
       <footer className="mt-8 text-center">
         <p className="text-sm text-gray-400 dark:text-gray-500">
           Sistema de Gestión Vehicular &copy; {new Date().getFullYear()}

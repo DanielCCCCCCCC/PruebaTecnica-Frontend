@@ -1,8 +1,12 @@
-import React, { useState, useEffect, useMemo, Fragment } from 'react'; // <-- Se añadió useMemo
+import React, { useState, useEffect, useMemo, Fragment } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import toast from 'react-hot-toast';
 import { useRecordStore } from '../store/recordStore';
-import type { IRecord, ICreateRecord, IFilterRecords } from '../interfaces/IRecord'; 
+import type {
+  IRecord,
+  ICreateRecord,
+  IFilterRecords,
+} from '../interfaces/IRecord';
 import { RecordFormModal } from '../components/records/RecordFormModal';
 
 // --- Iconos (Sin cambios) ---
@@ -88,11 +92,11 @@ const formatDate = (date: Date | string) => {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-    timeZone: 'UTC', 
+    timeZone: 'UTC',
   });
 };
 
-// --- Helper para obtener valores (para ordenar) ---
+// --- Helper para obtener valores (para ordenar) (Sin cambios) ---
 // (Necesario para ordenar por campos anidados como vehicle.placa)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const getSortValue = (obj: IRecord, key: string): any => {
@@ -104,7 +108,6 @@ const getSortValue = (obj: IRecord, key: string): any => {
   }
   return '';
 };
-
 
 function RecordsPage() {
   // --- ESTADO DEL STORE (Sin cambios) ---
@@ -127,31 +130,34 @@ function RecordsPage() {
   const [recordToEdit, setRecordToEdit] = useState<IRecord | null>(null);
   const [recordToDelete, setRecordToDelete] = useState<IRecord | null>(null);
 
-  // --- ESTADOS DE FILTRO (para los inputs) ---
+  // --- ESTADOS DE FILTRO (para los inputs) (Sin cambios) ---
   const [vehicleFilter, setVehicleFilter] = useState('');
-  const [driverFilter, setDriverFilter] = useState(''); 
-  const [typeFilter, setTypeFilter] = useState(''); 
+  const [driverFilter, setDriverFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
   const [startDateFilter, setStartDateFilter] = useState('');
   const [endDateFilter, setEndDateFilter] = useState('');
   const [activeFilters, setActiveFilters] = useState<IFilterRecords>({});
 
-  // --- NUEVOS ESTADOS DE ORDEN Y PAGINACIÓN ---
-  const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
+  // --- ESTADOS DE ORDEN Y PAGINACIÓN (ACTUALIZADOS) ---
+  const [sortConfig, setSortConfig] = useState<{
+    key: string;
+    direction: 'asc' | 'desc';
+  } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [rowsPerPage] = useState(10); // Seteado a 10
+  const [rowsPerPage] = useState(12); // Ajustado a 12 para tarjetas
 
-  // Carga inicial
+  // Carga inicial (Sin cambios)
   useEffect(() => {
     fetchRecords(activeFilters);
   }, [fetchRecords, activeFilters]);
 
-  // Carga inicial de opciones de filtros
+  // Carga inicial de opciones de filtros (Sin cambios)
   useEffect(() => {
     fetchFilterOptions();
   }, [fetchFilterOptions]);
 
-  // --- LÓGICA DE ORDENAMIENTO (CLIENT-SIDE) ---
+  // --- LÓGICA DE ORDENAMIENTO (CLIENT-SIDE) (Sin cambios) ---
   const processedRecords = useMemo(() => {
     const sorted = [...records]; // Empezar con los datos filtrados del server
     if (sortConfig !== null) {
@@ -166,7 +172,7 @@ function RecordsPage() {
     return sorted;
   }, [records, sortConfig]);
 
-  // --- LÓGICA DE PAGINACIÓN (CLIENT-SIDE) ---
+  // --- LÓGICA DE PAGINACIÓN (CLIENT-SIDE) (Sin cambios) ---
   const totalItems = processedRecords.length;
   const totalPages = Math.ceil(totalItems / rowsPerPage);
   const paginatedRecords = useMemo(() => {
@@ -174,27 +180,29 @@ function RecordsPage() {
     return processedRecords.slice(startIndex, startIndex + rowsPerPage);
   }, [processedRecords, currentPage, rowsPerPage]);
 
-  // --- FUNCIÓN PARA SOLICITAR ORDEN ---
-  const requestSort = (key: string) => {
-    let direction: 'asc' | 'desc' = 'asc';
-    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
+  // --- NUEVO HANDLER PARA ORDENAMIENTO (DESDE EL SELECT) ---
+  const handleSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    if (value === '') {
+      setSortConfig(null);
+    } else {
+      const [key, direction] = value.split('-') as [string, 'asc' | 'desc'];
+      setSortConfig({ key, direction });
     }
-    setSortConfig({ key, direction });
     setCurrentPage(1); // Resetear a la primera página al ordenar
   };
 
-  // --- MANEJO DE FILTROS (Actualizado para resetear paginación) ---
+  // --- MANEJO DE FILTROS (Sin cambios) ---
   const handleFilterSubmit = () => {
     const newFilters: IFilterRecords = {
       vehicleId: vehicleFilter || undefined,
-      driverId: driverFilter || undefined, 
-      tipo: typeFilter ? typeFilter.toLowerCase() : undefined,
+      driverId: driverFilter || undefined,
+      tipo: typeFilter ? typeFilter.toUpperCase() : undefined, // Ajustado a MAYÚSCULAS
       startDate: startDateFilter
         ? new Date(startDateFilter + 'T00:00:00')
         : undefined,
       endDate: endDateFilter
-        ? new Date(endDateFilter + 'T00:00:00')
+        ? new Date(endDateFilter + 'T00:00:00') // Debería ser T23:59:59, pero depende del backend. Asumimos T00:00:00
         : undefined,
     };
     setActiveFilters(newFilters);
@@ -204,7 +212,7 @@ function RecordsPage() {
   const handleFilterClear = () => {
     setVehicleFilter('');
     setTypeFilter('');
-    setDriverFilter(''); 
+    setDriverFilter('');
     setStartDateFilter('');
     setEndDateFilter('');
     setActiveFilters({});
@@ -286,15 +294,13 @@ function RecordsPage() {
     'block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:focus:border-blue-400 dark:focus:ring-blue-400';
   const labelBaseClass =
     'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1';
-  // NUEVA CLASE PARA ENCABEZADOS DE TABLA
-  const thClass = "px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider";
-  const thSortableClass = `${thClass} cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700`;
-
 
   // --- FUNCIÓN PARA MANEJAR CAMBIO EN SELECT TIPO (Sin cambios) ---
-  const handleTypeFilterChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleTypeFilterChange = (
+    event: React.ChangeEvent<HTMLSelectElement>,
+  ) => {
     const newValue = event.target.value;
-    setTypeFilter(newValue); 
+    setTypeFilter(newValue);
   };
 
   return (
@@ -329,7 +335,7 @@ function RecordsPage() {
       {/* Main Content */}
       <main className="max-w-8xl mx-auto">
         <div className="shadow-2xl rounded-3xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-white/50 dark:border-gray-700/50 overflow-hidden">
-          {/* Toolbar y Filtros (Sin cambios) */}
+          {/* Toolbar y Filtros (ACTUALIZADO) */}
           <div className="p-5 border-b border-gray-200 dark:border-gray-700">
             <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-4">
               <button onClick={openNewModal} className={primaryButtonClass}>
@@ -337,12 +343,12 @@ function RecordsPage() {
                 Nuevo Registro
               </button>
               <span className="text-lg font-semibold text-gray-700 dark:text-gray-200">
-                Filtros
+                Filtros y Orden
               </span>
             </div>
 
-            {/* Fila de Filtros (Sin cambios) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Fila de Filtros (ACTUALIZADA A 3 COLUMNAS) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {/* Filtro Vehículos */}
               <div>
                 <label htmlFor="filt_vehicle" className={labelBaseClass}>
@@ -363,7 +369,7 @@ function RecordsPage() {
                   ))}
                 </select>
               </div>
-              
+
               {/* Filtro de Motorista/Driver */}
               <div>
                 <label htmlFor="filt_driver" className={labelBaseClass}>
@@ -372,14 +378,14 @@ function RecordsPage() {
                 <select
                   id="filt_driver"
                   className={inputBaseClass}
-                  value={driverFilter} 
-                  onChange={(e) => setDriverFilter(e.target.value)} 
+                  value={driverFilter}
+                  onChange={(e) => setDriverFilter(e.target.value)}
                   disabled={loadingFilters}
                 >
                   <option value="">Todos</option>
-                  {filterOptions.drivers?.map((d) => ( 
-                    <option key={d.id} value={d.id}> 
-                      {d.nombre} 
+                  {filterOptions.drivers?.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.nombre}
                     </option>
                   ))}
                 </select>
@@ -396,11 +402,11 @@ function RecordsPage() {
                   onChange={handleTypeFilterChange}
                 >
                   <option value="">Todos</option>
-                  <option value="entrada">Entrada</option>
-                  <option value="salida">Salida</option>
+                  <option value="ENTRADA">Entrada</option>
+                  <option value="SALIDA">Salida</option>
                 </select>
               </div>
-              {/* Filtros Fecha */}
+              {/* Filtros Fecha Inicio */}
               <div>
                 <label htmlFor="filt_start" className={labelBaseClass}>
                   Fecha Inicio
@@ -413,6 +419,7 @@ function RecordsPage() {
                   onChange={(e) => setStartDateFilter(e.target.value)}
                 />
               </div>
+              {/* Filtros Fecha Fin */}
               <div>
                 <label htmlFor="filt_end" className={labelBaseClass}>
                   Fecha Fin
@@ -425,8 +432,37 @@ function RecordsPage() {
                   onChange={(e) => setEndDateFilter(e.target.value)}
                 />
               </div>
+              
+              {/* NUEVO: Ordenamiento */}
+              <div>
+                <label htmlFor="filt_sort" className={labelBaseClass}>
+                  Ordenar por
+                </label>
+                <select
+                  id="filt_sort"
+                  className={inputBaseClass}
+                  value={
+                    sortConfig
+                      ? `${sortConfig.key}-${sortConfig.direction}`
+                      : ''
+                  }
+                  onChange={handleSortChange}
+                >
+                  <option value="">Por defecto</option>
+                  <option value="fecha-desc">Fecha (Más reciente)</option>
+                  <option value="fecha-asc">Fecha (Más antiguo)</option>
+                  <option value="kilometraje-desc">KM (Mayor a menor)</option>
+                  <option value="kilometraje-asc">KM (Menor a mayor)</option>
+                  <option value="vehicle.placa-asc">Vehículo (A-Z)</option>
+                  <option value="vehicle.placa-desc">Vehículo (Z-A)</option>
+                  <option value="driver.nombre-asc">Motorista (A-Z)</option>
+                  <option value="driver.nombre-desc">Motorista (Z-A)</option>
+                  <option value="tipo-asc">Tipo (A-Z)</option>
+                  <option value="tipo-desc">Tipo (Z-A)</option>
+                </select>
+              </div>
             </div>
-            {/* Botones de Filtro */}
+            {/* Botones de Filtro (Sin cambios) */}
             <div className="flex justify-end gap-3 mt-4">
               <button onClick={handleFilterClear} className={secondaryButtonClass}>
                 Limpiar
@@ -437,102 +473,40 @@ function RecordsPage() {
             </div>
           </div>
 
-          {/* Table (ACTUALIZADA) */}
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-700/50">
-                <tr>
-                  {/* ENCABEZADOS DE TABLA ACTUALIZADOS CON SORTING */}
-                  <th
-                    scope="col"
-                    className={thSortableClass}
-                    onClick={() => requestSort('vehicle.placa')}
+          {/* --- INICIO: REEMPLAZO DE TABLA POR GRID DE TARJETAS --- */}
+          <div className="p-4 md:p-6 bg-gray-50/50 dark:bg-gray-900/30">
+            {loading ? (
+              <div className="py-10 text-center text-gray-500 dark:text-gray-400 italic">
+                Cargando registros...
+              </div>
+            ) : paginatedRecords.length > 0 ? (
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {paginatedRecords.map((record) => (
+                  <div
+                    key={record.id}
+                    className="flex flex-col justify-between rounded-xl bg-white p-4 shadow-lg transition-all duration-200 hover:shadow-2xl dark:bg-gray-800 border border-gray-200 dark:border-gray-700/80"
                   >
-                    Vehículo (Placa)
-                    {/* Aquí podrías agregar un ícono de flecha basado en sortConfig */}
-                  </th>
-                  <th
-                    scope="col"
-                    className={thSortableClass}
-                    onClick={() => requestSort('driver.nombre')}
-                  >
-                    Motorista
-                  </th>
-                  <th
-                    scope="col"
-                    className={thSortableClass}
-                    onClick={() => requestSort('fecha')}
-                  >
-                    Fecha
-                  </th>
-                  <th
-                    scope="col"
-                    className={thSortableClass}
-                    onClick={() => requestSort('hora')}
-                  >
-                    Hora
-                  </th>
-                  <th
-                    scope="col"
-                    className={thSortableClass}
-                    onClick={() => requestSort('kilometraje')}
-                  >
-                    Kilometraje
-                  </th>
-                  <th
-                    scope="col"
-                    className={thSortableClass}
-                    onClick={() => requestSort('tipo')}
-                  >
-                    Tipo
-                  </th>
-                  <th scope="col" className={thClass}> {/* Sin ordenar */}
-                    Acciones
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {loading ? (
-                  <tr>
-                    <td
-                      colSpan={7}
-                      className="px-6 py-10 text-center text-gray-500 dark:text-gray-400 italic"
-                    >
-                      Cargando registros...
-                    </td>
-                  </tr>
-                // ACTUALIZADO: Mapear sobre 'paginatedRecords'
-                ) : paginatedRecords.length > 0 ? (
-                  paginatedRecords.map((record) => (
-                    <tr
-                      key={record.id}
-                      className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-150"
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                        {record.vehicle?.placa || (
-                          <span className="italic text-gray-400">N/A</span>
-                        )}
-                        <span className="block text-xs text-gray-500">
-                          {record.vehicle?.marca} {record.vehicle?.modelo}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
-                        {record.driver?.nombre || (
-                            <span className="italic text-gray-400">N/A</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
-                        {formatDate(record.fecha)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
-                        {record.hora}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
-                        {record.kilometraje.toLocaleString()} km
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    {/* Contenido Principal de la Tarjeta */}
+                    <div>
+                      {/* Cabecera de Tarjeta */}
+                      <div className="flex items-start justify-between gap-3 mb-3">
+                        {/* Placa y Vehículo */}
+                        <div className="flex-1">
+                          <h3
+                            className="text-lg font-bold text-blue-700 dark:text-blue-400 truncate"
+                            title={record.vehicle?.placa}
+                          >
+                            {record.vehicle?.placa || (
+                              <span className="italic text-gray-400">N/A</span>
+                            )}
+                          </h3>
+                          <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                            {record.vehicle?.marca} {record.vehicle?.modelo}
+                          </p>
+                        </div>
+                        {/* Badge de Tipo */}
                         <span
-                          className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          className={`flex-shrink-0 px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
                             record.tipo === 'SALIDA'
                               ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
                               : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
@@ -540,64 +514,101 @@ function RecordsPage() {
                         >
                           {record.tipo}
                         </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
-                        <div className="flex justify-center gap-2">
-                          <button
-                            onClick={() => openEditModal(record)}
-                            className="text-blue-600 hover:text-blue-800 p-1 rounded-md hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
-                            title="Editar"
-                          >
-                            <PencilIcon />
-                          </button>
-                          <button
-                            onClick={() => openConfirmModal(record)}
-                            className="text-red-600 hover:text-red-800 p-1 rounded-md hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors"
-                            title="Eliminar"
-                          >
-                            <TrashIcon />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td
-                      colSpan={7}
-                      className="px-6 py-10 text-center text-gray-500 dark:text-gray-400 italic"
-                    >
-                      {/* Lógica de mensaje 'No resultados' actualizada */}
-                      {records.length === 0 && Object.keys(activeFilters).length === 0
-                        ? 'No hay registros.'
-                        : 'No se encontraron registros con los filtros aplicados.'}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                      </div>
 
-          {/* --- NUEVO PAGINADOR --- */}
+                      {/* Detalles del Registro */}
+                      <div className="space-y-1.5 text-sm">
+                        <div className="flex">
+                          <span className="w-20 flex-shrink-0 font-medium text-gray-700 dark:text-gray-300">
+                            Motorista:
+                          </span>
+                          <span className="text-gray-600 dark:text-gray-400 truncate">
+                            {record.driver?.nombre || (
+                              <span className="italic text-gray-400">N/A</span>
+                            )}
+                          </span>
+                        </div>
+                        <div className="flex">
+                          <span className="w-20 flex-shrink-0 font-medium text-gray-700 dark:text-gray-300">
+                            Fecha:
+                          </span>
+                          <span className="text-gray-600 dark:text-gray-400">
+                            {formatDate(record.fecha)}
+                          </span>
+                        </div>
+                        <div className="flex">
+                          <span className="w-20 flex-shrink-0 font-medium text-gray-700 dark:text-gray-300">
+                            Hora:
+                          </span>
+                          <span className="text-gray-600 dark:text-gray-400">
+                            {record.hora}
+                          </span>
+                        </div>
+                        <div className="flex">
+                          <span className="w-20 flex-shrink-0 font-medium text-gray-700 dark:text-gray-300">
+                            Kilometraje:
+                          </span>
+                          <span className="text-gray-600 dark:text-gray-400">
+                            {record.kilometraje.toLocaleString()} km
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Acciones en el pie de la tarjeta */}
+                    <div className="mt-4 flex justify-end gap-2 border-t border-gray-200 pt-3 dark:border-gray-700">
+                      <button
+                        onClick={() => openEditModal(record)}
+                        className="rounded-md p-1 text-blue-600 transition-colors hover:bg-blue-100 hover:text-blue-800 dark:hover:bg-blue-900/50"
+                        title="Editar"
+                      >
+                        <PencilIcon />
+                      </button>
+                      <button
+                        onClick={() => openConfirmModal(record)}
+                        className="rounded-md p-1 text-red-600 transition-colors hover:bg-red-100 hover:text-red-800 dark:hover:bg-red-900/50"
+                        title="Eliminar"
+                      >
+                        <TrashIcon />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              // Mensaje de no resultados
+              <div className="py-10 text-center text-gray-500 dark:text-gray-400 italic">
+                {records.length === 0 && Object.keys(activeFilters).length === 0
+                  ? 'No hay registros.'
+                  : 'No se encontraron registros con los filtros aplicados.'}
+              </div>
+            )}
+          </div>
+          {/* --- FIN: REEMPLAZO DE TABLA --- */}
+
+          {/* --- PAGINADOR (Se mantiene igual) --- */}
           {totalPages > 1 && (
-            <div className="px-5 py-3 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row items-center sm:justify-between gap-2">
-              <span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">
-                Mostrando {Math.min((currentPage - 1) * rowsPerPage + 1, totalItems)} 
-                {" "}a {Math.min(currentPage * rowsPerPage, totalItems)} de {totalItems} registros
+            <div className="flex flex-col items-center gap-2 border-t border-gray-200 bg-gray-50 px-5 py-3 sm:flex-row sm:justify-between dark:border-gray-700 dark:bg-gray-700/50">
+              <span className="text-xs text-gray-700 sm:text-sm dark:text-gray-300">
+                Mostrando {Math.min((currentPage - 1) * rowsPerPage + 1, totalItems)}{' '}
+                a {Math.min(currentPage * rowsPerPage, totalItems)} de {totalItems}{' '}
+                registros
               </span>
               <div className="inline-flex items-center gap-1">
                 <button
-                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                   disabled={currentPage === 1}
                   className={`${secondaryButtonClass} rounded-r-none px-3 py-1 text-xs`}
                 >
                   Anterior
                 </button>
-                  <span className="text-xs text-gray-600 dark:text-gray-400 px-2">
-                    Pág {currentPage} de {totalPages}
-                  </span>
+                <span className="px-2 text-xs text-gray-600 dark:text-gray-400">
+                  Pág {currentPage} de {totalPages}
+                </span>
                 <button
-                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                  }
                   disabled={currentPage === totalPages}
                   className={`${secondaryButtonClass} rounded-l-none px-3 py-1 text-xs`}
                 >
@@ -607,7 +618,6 @@ function RecordsPage() {
             </div>
           )}
           {/* --- FIN DEL PAGINADOR --- */}
-
         </div>
       </main>
 
@@ -618,7 +628,8 @@ function RecordsPage() {
         recordToEdit={recordToEdit}
         onSave={handleSave}
         isSaving={isSaving}
-        vehicles={filterOptions.vehicles} 
+        vehicles={filterOptions.vehicles}
+        drivers={filterOptions.drivers} // <-- AÑADIDO: pasar motoristas al modal
       />
       <Transition appear show={isConfirmModalVisible} as={Fragment}>
         <Dialog as="div" className="relative z-10" onClose={hideConfirmModal}>
@@ -646,7 +657,7 @@ function RecordsPage() {
               >
                 <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all dark:bg-gray-800">
                   <div className="flex items-start">
-                    <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/50 sm:mx-0 sm:h-10 sm:w-10">
+                    <div className="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10 dark:bg-red-900/50">
                       <AlertIcon className="h-6 w-6 text-red-600 dark:text-red-400" />
                     </div>
                     <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
@@ -658,8 +669,8 @@ function RecordsPage() {
                       </Dialog.Title>
                       <div className="mt-2">
                         <p className="text-sm text-gray-500 dark:text-gray-400">
-                          ¿Estás seguro de eliminar este registro? Esta acción
-                          no se puede deshacer.
+                          ¿Estás seguro de eliminar este registro? Esta acción no
+                          se puede deshacer.
                         </p>
                       </div>
                     </div>
