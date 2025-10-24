@@ -438,8 +438,8 @@ function RecordsPage() {
                   <option value="fecha-asc">Fecha (Más antiguo)</option>
                   <option value="kilometraje-desc">KM (Mayor a menor)</option>
                   <option value="kilometraje-asc">KM (Menor a mayor)</option>
-                  <option value="vehicle.placa-asc">Vehículo (A-Z)</option>
-                  <option value="vehicle.placa-desc">Vehículo (Z-A)</option>
+                  <option value="vehicle.placa-asc">Vehículo/Placa (A-Z)</option>
+                  <option value="vehicle.placa-desc">Vehículo/Placa (Z-A)</option>
                   <option value="driver.nombre-asc">Motorista (A-Z)</option>
                   <option value="driver.nombre-desc">Motorista (Z-A)</option>
                   <option value="tipo-asc">Tipo (A-Z)</option>
